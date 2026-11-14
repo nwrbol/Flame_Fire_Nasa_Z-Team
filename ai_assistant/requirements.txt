@@ -1,0 +1,3 @@
+scikit-learn
+groq
+python-dotenv

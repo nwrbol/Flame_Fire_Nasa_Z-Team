@@ -1,0 +1,21 @@
+Test Day,Round,Burner,Mesh Polarity,Fuel Bottle,Fuel conc.,Flames ignited
+18073,1,coflow,negative,100% CH4,100%,10
+18078,1,coflow,negative,100% CH4,"70%, 100%",10
+18080,1,coflow,negative,40% CH4,40%,8
+18087,1,coflow,negative,100% C2H4,"80%, 100%",10
+18092,1,coflow,negative,30% C2H4,30%,11
+18095,1,coflow,positive,30% C2H4,30%,10
+18102,1,coflow,positive,40% CH4,40%,8
+18106,1,coflow,positive,40% CH4,40%,13
+18113,1,coflow,positive,100% CH4,100%,15
+18130,1,coflow,positive,100% CH4,70%,13
+18137,1,coflow,positive,100% C2H4,"80%, 100%",12
+18269,2,gas-jet,negative,40% CH4,40%,11
+18274,2,gas-jet,negative,30% C2H4,30%,11
+18282,2,gas-jet,negative,100% CH4,"70%, 100%",13
+18285,2,gas-jet,negative,100% C2H4,100%,10
+18290,2,gas-jet,negative,100% C2H4,80%,11
+18298,2,gas-jet,positive,40% CH4,40%,9
+18302,2,gas-jet,positive,30% C2H4,30%,10
+18312,2,gas-jet,positive,100% CH4,"70%, 100%",13
+18319,2,gas-jet,positive,100% C2H4,"25%, 50%, 80%, 100%",11

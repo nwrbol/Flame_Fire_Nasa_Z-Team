@@ -1,0 +1,92 @@
+[
+  {
+    "experiment": "SAFFIRE-I",
+    "row": "F1C1/F1C2",
+    "reason": "Pre-test flow visulation data for sample 1"
+  },
+  {
+    "experiment": "SAFFIRE-I",
+    "row": "F2C1/F2C2",
+    "reason": "Pre-test flow visulation data for sample 2"
+  },
+  {
+    "experiment": "SAFFIRE-II",
+    "row": "F1C1/F1C2",
+    "reason": "Pre-test flow visulation data for sample 2-1"
+  },
+  {
+    "experiment": "SAFFIRE-II",
+    "row": "F2C1/F2C2",
+    "reason": "Pre-test flow visulation data for sample 2-2"
+  },
+  {
+    "row": 69,
+    "reason": "soot cleaning, not a test",
+    "text": [
+      "8/3/12",
+      "216",
+      "SOOT Cleaning"
+    ]
+  },
+  {
+    "row": 85,
+    "reason": "not a test (setup/stow/notes)",
+    "text": [
+      "2012-08-24 00:00:00",
+      "STOW"
+    ]
+  },
+  {
+    "row": 87,
+    "reason": "not a test (setup/stow/notes)",
+    "text": [
+      "2013-04-04 00:00:00",
+      "13-94:  15:45",
+      "SETUP"
+    ]
+  },
+  {
+    "row": 88,
+    "reason": "not a test (setup/stow/notes)",
+    "text": [
+      "2013-04-05 00:00:00",
+      "13-95 ",
+      "Dilution test with CSA-CP"
+    ]
+  },
+  {
+    "row": 130,
+    "reason": "not a test (setup/stow/notes)",
+    "text": [
+      "remember to turn off auto iso when don't want it.  GMT 229 setup."
+    ]
+  },
+  {
+    "row": 131,
+    "reason": "not a test (setup/stow/notes)",
+    "text": [
+      "still in this mode at end of ops on 234."
+    ]
+  },
+  {
+    "row": 132,
+    "reason": "not a test (setup/stow/notes)",
+    "text": [
+      "actual data for 234 is const iso at 1000"
+    ]
+  },
+  {
+    "row": 133,
+    "reason": "not a test (setup/stow/notes)",
+    "text": [
+      "down to 1/3 s"
+    ]
+  },
+  {
+    "row": 134,
+    "reason": "not a test (setup/stow/notes)",
+    "text": [
+      "auto iso max iso 3200, min exposure 1/4 s"
+    ]
+  }
+]
