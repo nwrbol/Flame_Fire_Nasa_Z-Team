@@ -73,6 +73,7 @@ def experiments(
     page: int | None = Query(None, ge=1),
     page_size: int | None = Query(None, ge=1, le=100),
     filters: str = '{}',
+    q: str = Query('', max_length=200, description='Case-insensitive substring search across CSV values and record ID'),
     limit: int | None = Query(None, ge=1, le=100),
     offset: int | None = Query(None, ge=0),
     filter_field: str | None = None,
@@ -97,6 +98,10 @@ def experiments(
     if (limit is not None or offset is not None) and (page is not None or page_size is not None):
         raise HTTPException(400, 'Use either limit/offset or page/page_size, not both')
     rows = [row for row in rows if all(row['values'][k] == v for k, v in criteria.items())]
+    needle = q.strip().casefold()
+    if needle:
+        rows = [row for row in rows if needle in row['id'].casefold()
+                or any(needle in value.casefold() for value in row['values'].values())]
     size = limit if limit is not None else (page_size or 20)
     start = offset if offset is not None else ((page or 1) - 1) * size
     pagination = {'page': start // size + 1, 'page_size': size,

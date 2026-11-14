@@ -1,4 +1,4 @@
-# Flame in Freefall Р В Р вЂ Р В РІР‚С™Р Р†Р вЂљРЎСљ Backend
+# Flame in Freefall Р В Р’В Р В РІР‚В Р В Р’В Р Р†Р вЂљРЎв„ўР В Р вЂ Р В РІР‚С™Р РЋРЎС™ Backend
 
 Python 3.12 + FastAPI. The catalogue describes NASA investigations; experimental
 records come from one selected CSV. The default is the analyst-prepared FireGap
@@ -51,8 +51,8 @@ The `filter_field/filter_value` pair can supplement `filters`; conflicting value
 return 400. Empty values (`filter_value=`) are supported. No matches returns an
 empty list and total 0.
 
-`limit`: 1Р В Р вЂ Р В РІР‚С™Р Р†Р вЂљРЎС™100, default 20; `offset`: at least 0, default 0.
-Legacy pagination: `page` starts at 1; `page_size` is 1Р В Р вЂ Р В РІР‚С™Р Р†Р вЂљРЎС™100.
+`limit`: 1Р В Р’В Р В РІР‚В Р В Р’В Р Р†Р вЂљРЎв„ўР В Р вЂ Р В РІР‚С™Р РЋРЎв„ў100, default 20; `offset`: at least 0, default 0.
+Legacy pagination: `page` starts at 1; `page_size` is 1Р В Р’В Р В РІР‚В Р В Р’В Р Р†Р вЂљРЎв„ўР В Р вЂ Р В РІР‚С™Р РЋРЎв„ў100.
 Mixing the two pagination schemes returns 400. `total` counts matching records;
 `pages` is the page count. With arbitrary offsets, `page` is `offset // limit + 1`;
 use offset for navigation rather than reconstructing it from page.
@@ -117,7 +117,7 @@ Their `source_url` points to an accessible official source for the description.
 Sources:
 
 - [NASA combustion research overview](https://www.nasa.gov/missions/station/studying-combustion-and-fire-safety/)
-- [Saffire IР В Р вЂ Р В РІР‚С™Р Р†Р вЂљРЎС™III, NASA publication](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20170000230.pdf)
+- [Saffire IР В Р’В Р В РІР‚В Р В Р’В Р Р†Р вЂљРЎв„ўР В Р вЂ Р В РІР‚С™Р РЋРЎв„ўIII, NASA publication](https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20170000230.pdf)
 - [ACME](https://science.nasa.gov/mission/acme/)
 - [NASA investigation list: SAME and SAME-R](https://science.nasa.gov/physical-sciences-informatics-psi/nasa-psi-research-opportunity/)
 - [FLEX](https://psi.nasa.gov/physci/repo/data/investigations/PSI-69)
@@ -204,3 +204,10 @@ Full ASGI HTTP tests remain unverified in this Windows execution environment.
 Run the full unittest suite on the developer machine before deployment.
 FRONTEND_API.md includes integration notes for the supplied standalone HTML and
 React alternatives. No frontend source files were changed by this review.
+
+## Text search
+
+`GET /api/experiments?q=cotton&limit=20&offset=0` searches every CSV cell and the
+record ID for a case-insensitive literal substring. q is limited to 200 characters.
+It combines with exact filters before pagination. Empty q returns unsearched
+results. This is record search; catalogue descriptions are not searched.

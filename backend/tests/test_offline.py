@@ -37,9 +37,9 @@ class OfflineTests(unittest.TestCase):
 
     def test_utf8_bom_all_columns_and_exact_values(self):
         for encoding in ('utf-8', 'utf-8-sig'):
-            self.path.write_text('id,material,value,empty\n001,"Café, A", 1.2300 ,\n', encoding=encoding)
+            self.path.write_text('id,material,value,empty\n001,"CafГ©, A", 1.2300 ,\n', encoding=encoding)
             rows, columns = read_dataset(self.path)
-            self.assertEqual(rows[0], {'id': '001', 'values': {'id': '001', 'material': 'Café, A', 'value': ' 1.2300 ', 'empty': ''}})
+            self.assertEqual(rows[0], {'id': '001', 'values': {'id': '001', 'material': 'CafГ©, A', 'value': ' 1.2300 ', 'empty': ''}})
             self.assertEqual(len(columns), 4)
 
     def test_no_name_description_or_id_stable_hash(self):
@@ -163,6 +163,20 @@ class OfflineTests(unittest.TestCase):
         self.assertEqual(len({r['id'] for r in records}), len(originals))
         with self.assertRaises(ValueError):
             read_dataset(DEFAULT_CSV, 'test_id')
+
+    def test_search_substring_case_and_pagination(self):
+        data = list_records(q=' ALP ', limit=1, offset=1)
+        self.assertEqual(data['pagination']['total'], 2)
+        self.assertEqual(data['experiments'][0]['id'], '003')
+        self.assertEqual(list_records(q='002')['experiments'][0]['id'], '002')
+        self.assertEqual(list_records(q='   ')['pagination']['total'], 3)
+        self.assertEqual(list_records(q='no match')['experiments'], [])
+
+    def test_search_with_filters_and_literal_text(self):
+        self.assertEqual(list_records(q='alp', filter_field='extra', filter_value='10')['pagination']['total'], 1)
+        self.assertEqual(list_records(q='.*')['pagination']['total'], 0)
+        self.path.write_text('id,label,extra\n1,Straße,\n', encoding='utf-8')
+        self.assertEqual(list_records(q='STRASSE')['pagination']['total'], 1)
 
     def test_openapi_routes_and_validation_schema(self):
         schema = app.openapi()

@@ -189,3 +189,29 @@ against the catalogue/analyst metadata before displaying them.
 
 The API returns 414 for oversized URLs and 429 with Retry-After for its shared
 request budget. Respect Retry-After; do not retry in a tight loop.
+
+## Search input
+
+GET /api/experiments?q=cotton&limit=20&offset=0 searches for a literal substring
+across all CSV cell values and the API record ID, ignoring case. Leading/trailing
+query whitespace is ignored. Blank q disables search. The query is limited to
+200 characters (422 if exceeded). It is not regex, numeric-range or semantic
+search. It searches experiment records, not the catalogue descriptions.
+
+Search combines with existing exact filters using AND, before pagination.
+pagination.total counts the combined matches. No matches returns an empty list.
+
+```javascript
+const params = new URLSearchParams({q: searchText, limit: '20', offset: '0'});
+const response = await fetch('/api/experiments?' + params);
+if (!response.ok) throw new Error(`HTTP ${response.status}`);
+const result = await response.json();
+```
+
+Add an English-labelled Search field and a submit button to the records view.
+On a new query or filter, reset offset to zero. Preserve q on page navigation.
+Show pagination.total and an empty-result message. Abort superseded requests or
+ignore outdated responses. Prefer explicit submit; if using live search, debounce
+and observe 429 Retry-After. Render cell values as text and never silently use
+mock data on network errors. Standalone index.html must call this API directly;
+its current page does not import api.js.
