@@ -1,4 +1,4 @@
-# Flame in Freefall Р В Р вЂ Р В РІР‚С™Р Р†Р вЂљРЎСљ Backend
+# Flame in Freefall Backend
 
 Python 3.12 + FastAPI. The catalogue describes NASA investigations; experimental
 records come from one selected CSV. The default is the analyst-prepared FireGap
