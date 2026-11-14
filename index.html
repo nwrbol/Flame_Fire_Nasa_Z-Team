@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flame in Freefall — огонь в невесомости</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--bg:#0b0f19;--panel:rgba(255,255,255,.045);--line:rgba(255,255,255,.09);--text:#e8edf7;--mute:#8f9bb3;--cyan:#22d3ee;--ember:#ff7a2f;--red:#ff3d4a;--ok:#34d399;--warn:#fbbf24}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Onest',system-ui,sans-serif;line-height:1.6}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:
+ radial-gradient(900px 500px at 85% -5%,rgba(34,211,238,.10),transparent 60%),
+ radial-gradient(700px 500px at 0% 40%,rgba(255,122,47,.07),transparent 60%)}
+h1,h2,h3,.disp{font-family:'Unbounded',sans-serif;letter-spacing:-.02em}
+.glass{background:var(--panel);border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.8rem 1.4rem;border-radius:12px;font-weight:600;transition:transform .15s,background .2s,box-shadow .2s;cursor:pointer}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--cyan),#38bdf8);color:#04222b}
+.btn-primary:hover{box-shadow:0 0 28px rgba(34,211,238,.4)}
+.btn-ghost{border:1px solid var(--line);color:var(--text)}
+.btn-ghost:hover{background:rgba(255,255,255,.07)}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:6px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:99px;background:linear-gradient(90deg,var(--cyan) var(--p,0%),rgba(255,255,255,.12) var(--p,0%));outline-offset:6px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;border:4px solid var(--cyan);cursor:grab}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid var(--cyan);cursor:grab}
+.num{font-family:'Unbounded',sans-serif;font-variant-numeric:tabular-nums}
+.tab{padding:.45rem 1rem;border-radius:10px;font-size:.9rem;color:var(--mute);transition:.2s}
+.tab[aria-pressed=true]{background:rgba(34,211,238,.14);color:var(--cyan)}
+.chip{display:inline-block;padding:.35rem .8rem;border:1px solid var(--line);border-radius:99px;font-size:.85rem;color:var(--text);transition:.2s}
+.chip:hover{border-color:var(--cyan);color:var(--cyan)}
+.orb{position:absolute;right:-8%;top:50%;translate:0 -50%;width:min(620px,70vw);aspect-ratio:1;border-radius:50%;
+ background:radial-gradient(circle,rgba(255,255,255,.95) 0 5%,rgba(255,190,90,.55) 14%,rgba(255,92,40,.28) 32%,rgba(255,61,74,.08) 52%,transparent 68%);
+ filter:blur(6px);animation:breathe 7s ease-in-out infinite;pointer-events:none}
+@keyframes breathe{50%{transform:scale(1.07);opacity:.85}}
+@media (prefers-reduced-motion:reduce){.orb{animation:none}html{scroll-behavior:auto}*{transition:none!important}}
+.risk-bar{height:10px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden}
+.risk-bar>i{display:block;height:100%;width:0;border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1),background .3s}
+</style>
+</head>
+<body>
+
+<header class="sticky top-0 z-50" style="background:rgba(11,15,25,.75);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)">
+  <div class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
+    <a href="#top" class="flex items-center gap-2.5 font-semibold">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="url(#g)" opacity=".9"/><circle cx="12" cy="12" r="3.2" fill="#fff"/><defs><radialGradient id="g"><stop offset="0" stop-color="#ffd27a"/><stop offset="1" stop-color="#ff3d4a"/></radialGradient></defs></svg>
+      <span class="disp text-[15px]">Flame in Freefall</span>
+    </a>
+    <nav class="hidden md:flex gap-1 text-sm" aria-label="Основная">
+      <a class="tab" href="#sim">Симулятор</a><a class="tab" href="#audit">ИИ-аудит деталей</a><a class="tab" href="#archive">Архив NASA PSI</a><a class="tab" href="#about">О проекте</a>
+    </nav>
+    <span class="text-xs px-3 py-1.5 rounded-full whitespace-nowrap" style="border:1px solid var(--line);color:var(--cyan)">NASA Space Apps 2026</span>
+  </div>
+</header>
+
+<main id="top">
+<section class="relative overflow-hidden">
+  <div class="orb" aria-hidden="true"></div>
+  <div class="relative max-w-6xl mx-auto px-5 pt-20 pb-28 md:pt-32 md:pb-40">
+    <h1 class="text-4xl md:text-6xl font-bold leading-[1.08] max-w-3xl">Огонь в невесомости: как безопасно покорять космос?</h1>
+    <p class="mt-6 text-lg max-w-xl" style="color:var(--mute)">На Земле пламя вытягивается вверх. На МКС оно становится шаром, горит тише и гаснет иначе. Меняйте параметры, проверяйте материалы и смотрите, что показали эксперименты NASA.</p>
+    <div class="mt-9 flex flex-wrap gap-3">
+      <a href="#sim" class="btn btn-primary">Запустить симуляцию</a>
+      <a href="#audit" class="btn btn-ghost">Проверить деталь через ИИ</a>
+    </div>
+    <dl class="mt-14 flex flex-wrap gap-x-12 gap-y-4 text-sm" style="color:var(--mute)">
+      <div><dt>Эксперименты в базе</dt><dd class="num text-2xl text-white mt-1">6</dd></div>
+      <div><dt>Серии Saffire на Cygnus</dt><dd class="num text-2xl text-white mt-1">3</dd></div>
+      <div><dt>Источник данных</dt><dd class="text-white mt-1 text-base">NASA PSI</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- SIMULATOR -->
+<section id="sim" class="max-w-6xl mx-auto px-5 py-20 scroll-mt-16">
+  <h2 class="text-3xl md:text-4xl font-bold">Симулятор горения</h2>
+  <p class="mt-3 max-w-2xl" style="color:var(--mute)">Модель упрощённая и показывает тенденции, а не точные значения. Она опирается на то, что видели в экспериментах: в невесомости при малом потоке воздуха пламя распространяется опаснее всего.</p>
+
+  <div class="mt-10 grid lg:grid-cols-5 gap-6">
+    <div class="glass p-6 lg:col-span-2 space-y-7">
+      <div class="flex gap-1" role="group" aria-label="Среда">
+        <button class="tab" id="gMicro" aria-pressed="true">Невесомость</button>
+        <button class="tab" id="gEarth" aria-pressed="false">Земля</button>
+      </div>
+      <label class="block"><div class="flex justify-between mb-3"><span>Кислород O<sub>2</sub></span><b class="num text-cyan-300" id="vO2">21%</b></div>
+        <input id="o2" type="range" min="15" max="40" value="21" step="1"></label>
+      <label class="block"><div class="flex justify-between mb-3"><span>Скорость потока воздуха</span><b class="num text-cyan-300" id="vFlow">10 см/с</b></div>
+        <input id="flow" type="range" min="0" max="50" value="10" step="1"></label>
+      <label class="block"><div class="flex justify-between mb-3"><span>Толщина материала</span><b class="num text-cyan-300" id="vThick">0,5 мм</b></div>
+        <input id="thick" type="range" min="1" max="30" value="5" step="1"></label>
+      <p class="text-sm" style="color:var(--mute)">Чем тоньше материал и больше кислорода, тем быстрее фронт пламени. Тонкие плёнки горят опаснее толстых плит.</p>
+    </div>
+
+    <div class="glass p-6 lg:col-span-3 flex flex-col">
+      <div class="relative rounded-2xl overflow-hidden flex-1 min-h-[280px]" style="background:radial-gradient(circle at 50% 50%,#10182b,#070a12)">
+        <canvas id="flame" class="w-full h-full block" aria-label="Визуализация пламени" role="img"></canvas>
+        <div id="envLabel" class="absolute left-4 top-3 text-xs" style="color:var(--mute)">Сферическое пламя, микрогравитация</div>
+      </div>
+      <div class="mt-5">
+        <div class="flex justify-between text-sm mb-2"><span>Уровень риска</span><b id="riskTxt" class="num">—</b></div>
+        <div class="risk-bar"><i id="riskBar"></i></div>
+      </div>
+      <div class="mt-5 grid grid-cols-2 gap-4">
+        <div class="rounded-xl p-4" style="background:rgba(255,255,255,.04)"><div class="text-xs" style="color:var(--mute)">Скорость фронта пламени</div><div class="num text-2xl mt-1"><span id="spread">0</span> <span class="text-sm font-normal" style="color:var(--mute)">мм/с</span></div></div>
+        <div class="rounded-xl p-4" style="background:rgba(255,255,255,.04)"><div class="text-xs" style="color:var(--mute)">Время до самозатухания</div><div class="num text-2xl mt-1"><span id="quench">0</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AI AUDIT -->
+<section id="audit" class="max-w-6xl mx-auto px-5 py-20 scroll-mt-16">
+  <div class="grid lg:grid-cols-5 gap-10">
+    <div class="lg:col-span-2">
+      <h2 class="text-3xl md:text-4xl font-bold">ИИ-аудит деталей</h2>
+      <p class="mt-3" style="color:var(--mute)">Опишите деталь или материал. ИИ оценит риск воспламенения в невесомости, объяснит физику и предложит замену.</p>
+      <form id="auditForm" class="mt-7 space-y-3">
+        <label for="q" class="text-sm">Что проверяем?</label>
+        <input id="q" class="w-full rounded-xl px-4 py-3.5 outline-none" style="background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text)" placeholder="Например: полиэтиленовый чехол панели управления">
+        <div class="flex flex-wrap gap-2" id="examples"></div>
+        <button class="btn btn-primary" type="submit">Проверить риск</button>
+      </form>
+    </div>
+    <div class="lg:col-span-3 glass p-7 min-h-[320px]" id="auditOut" aria-live="polite">
+      <div class="h-full flex flex-col justify-center text-center" style="color:var(--mute)">
+        <p class="text-lg text-white">Здесь появится вердикт</p>
+        <p class="mt-1 text-sm">Введите материал слева или выберите пример.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHIVE -->
+<section id="archive" class="max-w-6xl mx-auto px-5 py-20 scroll-mt-16">
+  <h2 class="text-3xl md:text-4xl font-bold">Архив NASA PSI</h2>
+  <p class="mt-3 max-w-2xl" style="color:var(--mute)">Реальные наборы данных из Physical Sciences Informatics. Каждая ссылка ведёт на страницу эксперимента в репозитории NASA.</p>
+  <div class="mt-10 grid md:grid-cols-3 gap-6">
+    <article class="glass p-6 flex flex-col">
+      <div class="w-full h-24 rounded-xl mb-5" style="background:radial-gradient(circle at 30% 60%,rgba(34,211,238,.35),transparent 60%),rgba(255,255,255,.03)"></div>
+      <h3 class="text-xl font-bold">BASS-II</h3>
+      <p class="mt-1 text-sm" style="color:var(--cyan)">Горение твёрдых тел в перчаточном боксе</p>
+      <p class="mt-3 text-sm flex-1" style="color:var(--mute)">Образцы разной толщины и состава горят в потоке с заданным кислородом. Результаты показывают, где в невесомости проходит граница затухания.</p>
+      <a class="btn btn-ghost mt-6 justify-center" target="_blank" rel="noopener" href="https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources">Посмотреть датасет</a>
+    </article>
+    <article class="glass p-6 flex flex-col">
+      <div class="w-full h-24 rounded-xl mb-5" style="background:radial-gradient(circle at 70% 40%,rgba(255,122,47,.45),transparent 60%),rgba(255,255,255,.03)"></div>
+      <h3 class="text-xl font-bold">Saffire</h3>
+      <p class="mt-1 text-sm" style="color:var(--cyan)">Полномасштабный огонь на корабле Cygnus</p>
+      <p class="mt-3 text-sm flex-1" style="color:var(--mute)">Три запуска, в которых горел большой образец материала в специальном модуле после расстыковки от МКС. Это самые близкие к реальной аварии данные.</p>
+      <div class="mt-5 flex flex-wrap gap-2">
+        <a class="chip" target="_blank" rel="noopener" href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-98">Saffire-1</a>
+        <a class="chip" target="_blank" rel="noopener" href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-99">Saffire-2</a>
+        <a class="chip" target="_blank" rel="noopener" href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-100">Saffire-3</a>
+      </div>
+    </article>
+    <article class="glass p-6 flex flex-col">
+      <div class="w-full h-24 rounded-xl mb-5" style="background:radial-gradient(circle at 50% 50%,rgba(255,61,74,.35),transparent 60%),rgba(255,255,255,.03)"></div>
+      <h3 class="text-xl font-bold">FLEX</h3>
+      <p class="mt-1 text-sm" style="color:var(--cyan)">Горение и тушение капель топлива</p>
+      <p class="mt-3 text-sm flex-1" style="color:var(--mute)">Капли горят шарообразным пламенем, а учёные проверяют, как их потушить. Данные помогают подбирать способы тушения для космоса.</p>
+      <div class="mt-5 flex flex-wrap gap-2">
+        <a class="chip" target="_blank" rel="noopener" href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-68">FLEX-1</a>
+        <a class="chip" target="_blank" rel="noopener" href="https://psi.nasa.gov/physci/repo/data/investigations/PSI-69">FLEX-2</a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section id="about" class="max-w-6xl mx-auto px-5 py-20 scroll-mt-16">
+  <div class="glass p-8 md:p-12 grid md:grid-cols-2 gap-10">
+    <div>
+      <h2 class="text-3xl font-bold">О проекте</h2>
+      <p class="mt-4" style="color:var(--mute)">Flame in Freefall помогает инженерам и всем, кто интересуется космосом, понять, почему огонь на орбите ведёт себя иначе, и как выбирать безопасные материалы.</p>
+    </div>
+    <div class="space-y-3 text-sm" style="color:var(--mute)">
+      <p><b class="text-white">Как работает ИИ-аудит.</b> Сейчас ответы формирует локальная модель-заглушка. Подключение к бэкенду на FastAPI делается одной функцией <code>auditMaterial</code> в скрипте ниже.</p>
+      <p><b class="text-white">Важно.</b> Результаты учебные и не заменяют сертификацию материалов по стандарту NASA-STD-6001.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer style="border-top:1px solid var(--line)">
+  <div class="max-w-6xl mx-auto px-5 py-10 flex flex-wrap justify-between gap-6 text-sm" style="color:var(--mute)">
+    <p>© 2026 Команда Flame in Freefall. Проект хакатона NASA Space Apps Challenge.</p>
+    <div class="flex gap-5">
+      <a class="hover:text-white" href="https://psi.nasa.gov/" target="_blank" rel="noopener">NASA PSI</a>
+      <a class="hover:text-white" href="https://www.spaceappschallenge.org/2026/challenges/flame-in-freefall/?tab=resources" target="_blank" rel="noopener">Ресурсы челленджа</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let micro=true;
+
+/* ---------- Simulator model (simplified) ---------- */
+function model(){
+  const o2=+$('o2').value, flow=+$('flow').value, th=+$('thick').value/10;
+  const ox=Math.max(0,(o2-14)/26);
+  // в невесомости опаснее всего малый поток; на Земле конвекция усиливает горение
+  const flowF=micro?(0.55+1.1*Math.exp(-Math.pow((flow-6)/10,2))):(0.7+flow/60);
+  const thinF=1.5/(0.6+th);
+  const spread=Math.max(0,Math.round(ox*ox*14*flowF*thinF*10)/10);
+  const risk=Math.min(100,Math.round(spread*7+(o2>30?12:0)));
+  const quenchSec=risk<18?Math.round(3+risk*.6):null;
+  return {o2,flow,th,spread,risk,quenchSec};
+}
+function paintRange(el){el.style.setProperty('--p',((el.value-el.min)/(el.max-el.min)*100)+'%')}
+function updateSim(){
+  ['o2','flow','thick'].forEach(i=>paintRange($(i)));
+  const m=model();
+  $('vO2').textContent=m.o2+'%';
+  $('vFlow').textContent=m.flow+' см/с';
+  $('vThick').textContent=m.th.toFixed(1).replace('.',',')+' мм';
+  $('spread').textContent=m.spread.toFixed(1).replace('.',',');
+  $('quench').textContent=m.quenchSec===null?'не гаснет':'≈ '+m.quenchSec+' с';
+  const lvl=m.risk<25?['Безопасно','var(--ok)']:m.risk<55?['Внимание','var(--warn)']:['Критическая опасность','var(--red)'];
+  $('riskTxt').textContent=lvl[0]+' · '+m.risk+'%';$('riskTxt').style.color=lvl[1];
+  const b=$('riskBar');b.style.width=Math.max(3,m.risk)+'%';
+  b.style.background=m.risk<25?'var(--ok)':m.risk<55?'linear-gradient(90deg,var(--warn),var(--ember))':'linear-gradient(90deg,var(--ember),var(--red))';
+  target=m;
+}
+['o2','flow','thick'].forEach(i=>$(i).addEventListener('input',updateSim));
+function setEnv(m){micro=m;$('gMicro').setAttribute('aria-pressed',m);$('gEarth').setAttribute('aria-pressed',!m);
+  $('envLabel').textContent=m?'Сферическое пламя, микрогравитация':'Вытянутое пламя, гравитация Земли';updateSim()}
+$('gMicro').onclick=()=>setEnv(true);$('gEarth').onclick=()=>setEnv(false);
+
+/* ---------- Flame canvas ---------- */
+const cv=$('flame'),cx=cv.getContext('2d');let target=null,size=0,t=0;
+function fit(){const r=cv.getBoundingClientRect(),d=devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;cx.setTransform(d,0,0,d,0,0)}
+addEventListener('resize',fit);
+function draw(){
+  const w=cv.clientWidth,h=cv.clientHeight;cx.clearRect(0,0,w,h);
+  if(target){size+=((Math.min(1,target.spread/16))-size)*.08}
+  t+=reduce?0:.03;
+  const R=18+size*Math.min(w,h)*.4, wob=1+(reduce?0:Math.sin(t*2)*.03);
+  const fl=target?target.flow/50:0;
+  const x=w/2+(micro?fl*R*.5:0), y=h/2+(micro?0:R*.25);
+  const sx=micro?1+fl*.3:.7, sy=micro?1-fl*.1:1.5+size*.5;
+  cx.save();cx.translate(x,y);cx.scale(sx*wob,sy*wob);
+  const g=cx.createRadialGradient(0,micro?0:R*.3,R*.05,0,0,R*1.25);
+  g.addColorStop(0,'rgba(255,255,255,.95)');g.addColorStop(.25,'rgba(255,200,100,.85)');
+  g.addColorStop(.6,'rgba(255,92,40,.45)');g.addColorStop(1,'rgba(255,61,74,0)');
+  cx.fillStyle=g;cx.beginPath();cx.arc(0,0,R*1.25,0,7);cx.fill();
+  cx.strokeStyle='rgba(34,211,238,'+(.25+size*.3)+')';cx.lineWidth=1.5;cx.beginPath();cx.arc(0,0,R*1.1,0,7);cx.stroke();
+  cx.restore();
+  requestAnimationFrame(draw);
+}
+
+/* ---------- AI audit (mock; replace with FastAPI call) ---------- */
+const DB=[
+ {k:['полиэтилен','пластик','чехол','пленк','плёнк'],risk:78,name:'Полиэтилен / термопластичная плёнка',
+  why:'Плавится и горит каплями расплава. В невесомости капли не падают вниз, а остаются рядом и поддерживают пламя. Тонкая плёнка прогревается мгновенно, поэтому огонь быстро идёт по поверхности.',rec:'Заменить на арамидную ткань (Nomex) или фторопласт PTFE. Если замена невозможна, закрыть плёнку негорючим кожухом.'},
+ {k:['pvc','пвх','оплетк','медн','провод','кабел'],risk:64,name:'Провод с изоляцией из ПВХ',
+  why:'Медь не горит, но изоляция нагревается при перегрузке и выделяет горючие газы. В замкнутом объёме без конвекции продукты горения накапливаются у кабеля.',rec:'Использовать провод с изоляцией ETFE или PTFE и ограничить ток предохранителем.'},
+ {k:['бумаг','картон','салфет','блокнот'],risk:72,name:'Бумага и картон',
+  why:'Целлюлоза хорошо горит при 21% кислорода, а у тонкого листа очень малая тепловая инерция. Огонь распространяется медленно, но устойчиво.',rec:'Перейти на электронные носители или на огнестойкую бумагу, хранить в закрытых контейнерах.'},
+ {k:['ткан','одежд','хлопок','текстил','нейлон','полотен'],risk:58,name:'Текстиль',
+  why:'Хлопок и нейлон горят хорошо. Ткань с пропиткой ведёт себя лучше, но при повышенном O₂ пропитка теряет эффект.',rec:'Использовать Nomex или Beta-ткань, которую уже применяют на борту.'},
+ {k:['силикон','резин','уплотнител'],risk:38,name:'Силиконовая резина',
+  why:'Горит хуже органических полимеров и образует золу, которая тормозит распространение пламени. Риск растёт при тонком слое и высоком O₂.',rec:'Допустимо при толщине более 2 мм. Проверить конкретную марку по стандарту NASA-STD-6001.'},
+ {k:['тефлон','ptfe','фторопласт'],risk:12,name:'Фторопласт (PTFE)',
+  why:'Требует очень высокой концентрации кислорода для горения. При перегреве выделяет токсичные газы, но воспламеняется трудно.',rec:'Хороший выбор. Следить за перегревом и вентиляцией.'},
+ {k:['алюмин','титан','сталь','металл','нержав'],risk:6,name:'Металл',
+  why:'Конструкционные металлы почти не горят в условиях кабины. Исключение — тонкая стружка и порошок.',rec:'Замена не нужна. Исключить металлическую пыль и стружку.'}
+];
+function auditMaterial(text){
+  // TODO: return fetch('/api/audit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({material:text})}).then(r=>r.json())
+  const s=text.toLowerCase();const hit=DB.find(d=>d.k.some(k=>s.includes(k)));
+  return new Promise(r=>setTimeout(()=>r(hit||{risk:45,name:'Материал не распознан',why:'В базе нет точного совпадения. Оценка выставлена по среднему значению для органических материалов. Уточните состав или укажите толщину.',rec:'Запросить паспорт материала и провести тест на горючесть по NASA-STD-6001.'}),900));
+}
+function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+$('auditForm').addEventListener('submit',async e=>{
+  e.preventDefault();const q=$('q').value.trim();if(!q){$('q').focus();return}
+  const out=$('auditOut');
+  out.innerHTML='<div class="h-full flex items-center justify-center text-center" style="color:var(--mute)">Анализируем материал…</div>';
+  const r=await auditMaterial(q);
+  const [lab,col]=r.risk<25?['Безопасно','var(--ok)']:r.risk<55?['Внимание','var(--warn)']:['Критическая опасность','var(--red)'];
+  out.innerHTML=`<div class="flex items-start justify-between gap-4 flex-wrap"><div><div class="text-sm" style="color:var(--mute)">«${esc(q)}»</div><h3 class="text-xl font-bold mt-1">${r.name}</h3></div>
+   <div class="text-right"><div class="num text-3xl" style="color:${col}">${r.risk}%</div><div class="text-sm" style="color:${col}">${lab}</div></div></div>
+   <div class="risk-bar mt-5"><i style="width:${r.risk}%;background:${col}"></i></div>
+   <h4 class="font-semibold mt-7">Что происходит в невесомости</h4><p class="mt-2" style="color:var(--mute)">${r.why}</p>
+   <h4 class="font-semibold mt-6">Чем заменить</h4><p class="mt-2" style="color:var(--mute)">${r.rec}</p>`;
+});
+['Полиэтиленовый чехол панели управления','Медный провод в оплетке PVC','Алюминиевый корпус','Бумажный блокнот'].forEach(t=>{
+  const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=t;
+  b.onclick=()=>{$('q').value=t;$('auditForm').requestSubmit()};$('examples').appendChild(b)});
+
+fit();updateSim();draw();
+</script>
+</body>
+</html>
