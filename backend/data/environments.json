@@ -1,0 +1,51 @@
+{
+  "_note": "Created for the MicroFlame site: environments.json was not part of the FireGap archive. Gravity values were read from the NASA NSSDCA Planetary Fact Sheets on the retrieval date below.",
+  "source": "NASA NSSDCA Planetary Fact Sheets (Goddard Space Flight Center)",
+  "retrieved": "2026-11-15",
+  "environments": [
+    {
+      "id": "earth",
+      "label": "Earth",
+      "g_ms2": 9.80665,
+      "g_rel": 1.0,
+      "basis": "Standard acceleration of gravity, CODATA 2018 (exact), as quoted on the NASA Earth Fact Sheet",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html",
+      "page_updated": "15 November 2024",
+      "psi_direct": false,
+      "psi_note": "All PSI tests in this dataset ran in microgravity; Earth is shown as the 1 g reference."
+    },
+    {
+      "id": "moon",
+      "label": "Moon",
+      "g_ms2": 1.62,
+      "g_rel": 0.165,
+      "basis": "Surface gravity (Moon Fact Sheet)",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html",
+      "page_updated": "11 January 2024",
+      "psi_direct": false,
+      "psi_note": "No PSI test in this dataset was run at lunar gravity."
+    },
+    {
+      "id": "mars",
+      "label": "Mars",
+      "g_ms2": 3.73,
+      "g_rel": 0.38,
+      "basis": "Surface gravity, mean (Mars Fact Sheet); equatorial surface acceleration is 3.69",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html",
+      "page_updated": "19 May 2025",
+      "psi_direct": false,
+      "psi_note": "No PSI test in this dataset was run at Martian gravity."
+    },
+    {
+      "id": "space",
+      "label": "Open space (orbit)",
+      "g_ms2": 0.0,
+      "g_rel": 0.0,
+      "basis": "Orbital free fall (microgravity). Residual micro-g accelerations on the ISS are measured by SAMS/MAMS (fact G19); the dataset gives no number, so 0 is used.",
+      "url": null,
+      "page_updated": null,
+      "psi_direct": true,
+      "psi_note": "BASS, BASS-II, FLEX and ACME ran on the ISS; Saffire I-III in the free-flying Cygnus."
+    }
+  ]
+}

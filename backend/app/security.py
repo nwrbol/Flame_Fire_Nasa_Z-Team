@@ -10,10 +10,10 @@ CHAT_BUDGET = 30              # POST /api/chat per minute, whole process (LLM co
 CHAT_BUDGET_PER_CLIENT = 8    # POST /api/chat per minute, per client address
 MAX_TRACKED_CLIENTS = 2048
 
-# The page has inline script/style and Google Fonts; everything else is same-origin.
+# The page has inline script/style; everything else is same-origin (no fonts or CDNs from the network).
 CSP = (b"default-src 'self'; script-src 'self' 'unsafe-inline'; "
-       b"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-       b"font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; "
+       b"style-src 'self' 'unsafe-inline'; "
+       b"font-src 'self'; img-src 'self' data:; connect-src 'self'; "
        b"object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
 
 
@@ -62,6 +62,11 @@ class RequestGuard:
                 if any(k.lower() == b'content-type' and v.startswith(b'text/html') for k, v in headers) \
                         and scope.get('path') == '/':
                     headers.append((b'content-security-policy', CSP))
+                # page scripts change with the site: always revalidate (ETag -> cheap 304), so a
+                # browser never runs a stale scene script against a newer page
+                if scope.get('path', '').startswith(('/js/', '/vendor/')) and \
+                        not any(k.lower() == b'cache-control' for k, _ in headers):
+                    headers.append((b'cache-control', b'no-cache'))
                 message['headers'] = headers
             await send(message)
 

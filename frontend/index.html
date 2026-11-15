@@ -3,28 +3,43 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Flame in Freefall</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>MicroFlame</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CradialGradient id='g' cx='.5' cy='.45' r='.5'%3E%3Cstop offset='0' stop-color='%23fff'/%3E%3Cstop offset='.35' stop-color='%239fc0ff'/%3E%3Cstop offset='1' stop-color='%233b6cff'/%3E%3C/radialGradient%3E%3ClinearGradient id='o' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%239dbbff'/%3E%3Cstop offset='1' stop-color='%235d8bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='13.5' y='15' width='5' height='16' rx='2.5' fill='url(%23o)'/%3E%3Ccircle cx='16' cy='9.5' r='8.5' fill='url(%23g)'/%3E%3Ccircle cx='16' cy='16' r='2.4' fill='%231b2a5a'/%3E%3C/svg%3E">
+<!-- Nothing is loaded from the network: system fonts only, all scripts and images are local. -->
 <style>
-:root{--bg:#f6f5f1;--fg:#141414;--mute:#6b6b66;--line:#e2e0d8;--card:#fff;--accent:#f0502a;--accent-soft:rgba(240,80,42,.1);--ok:#1f9d55;--warn:#c98a00;--dark:#111;--dark-fg:#f2f2ee}
+:root{--sans:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,Menlo,monospace;
+  --brand:Bahnschrift,"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif}
+:root{--covc:#1f9d55;--untested:rgba(120,120,115,.45);--track:rgba(120,120,115,.12);--bg:#f6f5f1;--fg:#141414;--mute:#6b6b66;--line:#e2e0d8;--card:#fff;--accent:#f0502a;--accent-soft:rgba(240,80,42,.1);--ok:#1f9d55;--warn:#c98a00;--dark:#111;--dark-fg:#f2f2ee}
 @media (prefers-color-scheme:dark){:root{--bg:#0f0f0e;--fg:#f0efe9;--mute:#9a9992;--line:#272724;--card:#171716;--accent-soft:rgba(240,80,42,.16);--dark:#070707}}
 *{box-sizing:border-box;margin:0}
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--fg);font:16px/1.55 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
 a{color:inherit}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
-.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
 @media (max-width:480px){.wrap{padding:0 16px}nav .wrap{gap:12px}nav ul a{padding:6px 8px}.panel{padding:20px}.seg button{padding:7px 12px}.stats{gap:28px}.stats b{font-size:30px}.readout b{font-size:18px}.readout div{padding:14px 12px}}
 
 /* nav */
 nav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 nav .wrap{display:flex;align-items:center;gap:32px;height:60px}
-.logo{white-space:nowrap;display:flex;align-items:center;gap:10px;font-weight:700;text-decoration:none;letter-spacing:-.01em}
-.logo i{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+/* MicroFlame wordmark: "Micro" in text colour, "Flame" in a blue gradient whose "l" is a
+   sample holder topped by a glowing blue flame ball (the microgravity flame). */
+.logo{white-space:nowrap;display:inline-flex;align-items:baseline;font:600 23px/1 var(--brand);letter-spacing:.01em;text-decoration:none;padding-top:8px}
+.logo .lg-m{color:var(--fg)}
+.logo .lg-f{background:linear-gradient(90deg,#a9c4ff,#5d8bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.logo .lg-l{position:relative;display:inline-block;width:.12em;height:.72em;margin:0 .07em 0 .06em;border-radius:.06em;background:linear-gradient(#9dbbff,#5d8bff)}
+.logo .lg-l::before{content:"";position:absolute;left:50%;bottom:calc(100% - .02em);width:.6em;height:.6em;translate:-50% 0;border-radius:50%;
+  background:radial-gradient(circle at 50% 42%,#fff 0 10%,#bcd2ff 24%,#5d8bff 50%,#3b6cff 66%,rgba(59,108,255,0) 72%);
+  box-shadow:0 0 .35em .05em rgba(59,108,255,.55);animation:lgGlow 3.2s ease-in-out infinite}
+.logo .lg-l::after{content:"";position:absolute;left:50%;top:-.11em;width:.2em;height:.2em;translate:-50% 0;border-radius:50%;background:#1b2a5a}
+@keyframes lgGlow{50%{box-shadow:0 0 .5em .1em rgba(59,108,255,.7)}}
+.logo:hover .lg-l::before{box-shadow:0 0 .6em .14em rgba(59,108,255,.8)}
+@media (max-width:480px){.logo{font-size:20px}}
+/* Light theme: deeper blue so "Flame" keeps contrast on the pale background */
+@media (prefers-color-scheme:light){.logo .lg-f{background-image:linear-gradient(90deg,#5b86ff,#2f56d6)}.logo .lg-l{background:linear-gradient(#5b86ff,#2f56d6)}}
 nav ul{display:flex;gap:4px;list-style:none;padding:0;margin-left:auto}
 nav ul a{display:block;padding:6px 12px;border-radius:99px;font-size:14px;color:var(--mute);text-decoration:none;transition:.2s}
 nav ul a:hover{color:var(--fg)}
@@ -45,11 +60,19 @@ nav ul a.on{background:var(--fg);color:var(--bg)}
 .btn.ghost{border:1px solid var(--line)}
 .btn.ghost:hover{border-color:var(--fg)}
 .btn span{transition:transform .2s}.btn:hover span{transform:translateX(3px)}
-.orb{position:absolute;right:-120px;top:40px;width:560px;height:560px;border-radius:50%;pointer-events:none;
-  background:radial-gradient(circle,rgba(40,90,255,0) 0 18%,rgba(60,120,255,.25) 30%,rgba(130,180,255,.75) 38%,rgba(60,120,255,.28) 46%,rgba(40,80,220,.08) 58%,transparent 68%);
-  filter:blur(4px);transition:transform .6s cubic-bezier(.2,.8,.2,1);animation:breathe 6s ease-in-out infinite;opacity:.9}
-@keyframes breathe{50%{scale:1.06}}
-@media (max-width:820px){.orb{width:340px;height:340px;right:-140px;top:10px;opacity:.5}}
+/* Hero: real microgravity flame photo (blue dome edge, sooty orange core), blended into the page */
+.orb{position:absolute;right:max(16px,calc((100vw - 1120px)/2 - 20px));top:40px;width:430px;height:520px;pointer-events:none;
+  background:url(/assets/hero-flame.webp) center/cover no-repeat;
+  -webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 48%,#000 58%,transparent 100%);
+  mask-image:radial-gradient(ellipse 50% 50% at 50% 48%,#000 58%,transparent 100%);
+  transition:transform .6s cubic-bezier(.2,.8,.2,1);animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{50%{scale:1.03;filter:brightness(1.08)}}
+/* Light theme: the photo's black background becomes a dark porthole with a soft ring */
+@media (prefers-color-scheme:light){.orb{border-radius:50%;-webkit-mask-image:none;mask-image:none;
+  outline:1px solid rgba(59,108,255,.28);outline-offset:10px;box-shadow:0 30px 80px rgba(59,108,255,.2),0 10px 40px rgba(240,80,42,.12)}}
+/* Dark theme: screen blending drops the black, only the flame light remains */
+@media (prefers-color-scheme:dark){.orb{mix-blend-mode:screen}}
+@media (max-width:820px){.orb{width:260px;height:315px;right:-70px;top:10px;opacity:.55}}
 .stats{display:flex;gap:56px;flex-wrap:wrap;margin-top:72px;padding-top:28px;border-top:1px solid var(--line)}
 .stats b{display:block;font-size:40px;font-weight:600;letter-spacing:-.03em}
 .stats span{font-size:13px;color:var(--mute)}
@@ -72,23 +95,51 @@ h2{font-size:clamp(32px,4.5vw,52px);letter-spacing:-.035em;line-height:1.05;marg
 .ctl{display:block;margin-top:28px}
 .ctl .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;font-size:15px}
 .ctl b{font-size:15px}
-input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:99px;background:linear-gradient(90deg,var(--fg) var(--p,0%),var(--line) var(--p,0%))}
+/* Track = NASA coverage: solid green where tested, grey stripes where never tested */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:99px;
+  background:var(--cov,transparent),repeating-linear-gradient(135deg,var(--untested) 0 3px,transparent 3px 7px),var(--track)}
+input[type=range]:disabled{opacity:.35}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.untested{font-size:12px;font-weight:600;color:#fff;background:var(--accent);padding:5px 11px;border-radius:99px}
+.panel{transition:box-shadow .25s,border-color .25s}
+.panel.out{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent),0 0 28px rgba(240,80,42,.18)}
+.st{font-size:11px;font-weight:600;padding:2px 7px;border-radius:99px;margin-left:6px;vertical-align:1px}
+.st.ok{background:rgba(31,157,85,.14);color:var(--ok)}
+.st.no{background:rgba(240,80,42,.12);color:var(--accent)}
+.st.na{background:var(--bg);color:var(--mute);border:1px solid var(--line)}
+.ctl .row .st:empty{display:none}
+.select{width:100%;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit;font-size:15px}
+.legend{display:flex;align-items:center;gap:8px;margin-top:18px;font-size:12px;color:var(--mute)}
+.legend .sw{display:inline-block;width:22px;height:8px;border-radius:99px;margin-left:6px}
+.legend .sw:first-child{margin-left:0}
+.legend .sw.ok{background:var(--covc)}
+.legend .sw.no{background:repeating-linear-gradient(135deg,var(--untested) 0 3px,transparent 3px 7px),var(--track)}
+.nearest{border-top:1px solid #222;padding:16px 20px 18px;font-size:13.5px;line-height:1.5}
+.nearest small{display:block;font-size:12px;color:#8c8c86;margin-bottom:4px}
+.nearest .nt b{font-weight:600}
+.nearest .nt .warn{color:#ff8a6b;font-weight:600}
+.nearest .nt .q{display:block;margin-top:6px;color:#8c8c86;font-size:12px}
+.nearest button{margin-top:8px;font-size:12.5px;color:#cfd6ff;text-decoration:underline}
+.env-seg{margin-top:36px}
+.env-seg button{padding:9px 18px;font-size:15px}
+.viz .canvas{min-height:380px}
+.viz .canvas canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.illus{position:absolute;left:14px;top:12px;z-index:2;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.1);color:#d9d9d4;pointer-events:none}
+.no3d{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#a5a59e;font-size:14px}
+.readout b.nodata{font-size:14px;color:#8c8c86;font-weight:500}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--card);border:2px solid var(--fg);cursor:grab;transition:transform .15s}
 input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2);border-color:var(--accent)}
 input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--card);border:2px solid var(--fg)}
 .presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px}
 .hint{margin-top:20px;font-size:13px;color:var(--mute)}
-.phys{margin-top:16px;padding:14px 16px;border-radius:14px;background:var(--bg);border:1px solid var(--line);font-size:13.5px;line-height:1.5;min-height:5.2em}
 .viz{background:var(--dark);color:var(--dark-fg);border-radius:20px;overflow:hidden;display:flex;flex-direction:column}
 .viz .canvas{position:relative;flex:1;min-height:320px}
 .viz canvas{position:absolute;inset:0;width:100%;height:100%}
-.viz .tag{position:absolute;left:20px;top:16px;font-size:12px;color:#8c8c86}
 .sim>*{min-width:0}
 .readout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow-wrap:anywhere;border-top:1px solid #222}
 .readout div{padding:18px 20px}.readout div+div{border-left:1px solid #222}
 .readout small{display:block;font-size:12px;color:#8c8c86}
 .readout b{font-size:24px;font-weight:500}
-#riskTxt{font-size:16px}
 
 /* chips */
 .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--line);border-radius:99px;font-size:13px;text-decoration:none;background:var(--card);transition:.15s}
@@ -117,10 +168,13 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .search{display:flex;align-items:center;gap:12px;margin-top:36px;padding:0 18px;height:56px;border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--mute);transition:border-color .2s,box-shadow .2s}
 .search:focus-within{border-color:var(--fg);box-shadow:0 0 0 4px var(--accent-soft)}
 .search input{flex:1;min-width:0;border:0;outline:0;background:none;color:var(--fg);font:inherit;font-size:16px}
-.search kbd{font:12px 'JetBrains Mono',monospace;padding:2px 7px;border:1px solid var(--line);border-radius:6px}
+.search kbd{font:12px var(--mono);padding:2px 7px;border:1px solid var(--line);border-radius:6px}
 @media (max-width:480px){.search kbd{display:none}}
 mark{background:rgba(59,130,246,.22);color:inherit;border-radius:3px;padding:0 1px}
 .bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:36px;align-items:center}
+.dl{display:flex;gap:6px;margin-left:auto}
+.dl .chip{font-weight:600}
+.dl+.pager{margin-left:12px}
 .pager{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:14px;color:var(--mute)}
 .pager button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--card)}
 .pager button:disabled{opacity:.35;cursor:default}
@@ -176,7 +230,7 @@ td.note{color:var(--mute);font-size:12px;min-width:240px;max-width:360px}
 .msg.bot p+p,.msg.bot p+ul,.msg.bot ul+p,.msg.bot p+ol,.msg.bot ol+p,.msg.bot .tw+p,.msg.bot p+.tw{margin-top:8px}
 .msg.bot ul,.msg.bot ol{padding-left:20px}
 .msg.bot li+li{margin-top:3px}
-.msg.bot code{font:12.5px 'JetBrains Mono',monospace;background:var(--bg);padding:1px 5px;border-radius:5px}
+.msg.bot code{font:12.5px var(--mono);background:var(--bg);padding:1px 5px;border-radius:5px}
 .msg.bot .h{font-weight:700;margin-top:6px}
 .tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
 .tw table{font-size:12.5px}.tw td,.tw th{padding:6px 10px}
@@ -212,7 +266,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
 
 <nav aria-label="Main">
   <div class="wrap">
-    <a class="logo" href="#top"><i></i>Flame in Freefall</a>
+    <a class="logo" href="#top" aria-label="MicroFlame, back to top"><span class="lg-m">Micro</span><span class="lg-f">F<span class="lg-l" aria-hidden="true"></span>ame</span></a>
     <ul>
       <li><a href="#sim">Simulator</a></li>
       <li><a href="#archive">Catalogue</a></li>
@@ -226,7 +280,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
   <div class="orb" id="orb" aria-hidden="true"></div>
   <div class="wrap" style="position:relative">
     <h1>Fire without <em>gravity.</em></h1>
-    <p>In orbit a flame turns into a blue sphere and goes out differently. Tune the conditions in the simulator and explore real NASA PSI test records.</p>
+    <p>In orbit a flame becomes a blue dome and goes out differently. Pick a real NASA test material, tune oxygen and pressure, and see where the data ends.</p>
     <div class="cta">
       <a href="#sim" class="btn primary">Launch simulator <span>→</span></a>
       <a href="#records" class="btn ghost">Explore data</a>
@@ -244,34 +298,45 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
   <div class="wrap reveal">
     <p class="kicker">01 · Simulator</p>
     <h2>Play with the conditions.</h2>
-    <p class="lead">A simplified model that shows trends, not exact values. In microgravity a weak airflow is the most dangerous case.</p>
+    <p class="lead">Pick an environment and a material NASA actually burned, then set oxygen, pressure and airflow. Striped parts of a slider are conditions NASA never tested. Every number below comes from a real test or a cited source, or says that there is none.</p>
+    <div class="seg env-seg" role="group" aria-label="Environment">
+      <button data-env="earth" aria-pressed="false">Earth</button>
+      <button data-env="moon" aria-pressed="false">Moon</button>
+      <button data-env="mars" aria-pressed="false">Mars</button>
+      <button data-env="space" aria-pressed="true">Open space</button>
+    </div>
     <div class="sim">
-      <div class="panel">
-        <div class="seg" role="group" aria-label="Environment">
-          <button id="gMicro" aria-pressed="true">Microgravity</button>
-          <button id="gEarth" aria-pressed="false">Earth</button>
+      <div class="panel" id="simPanel">
+        <div class="panel-head">
+          <span class="st na" id="envInfo"></span>
+          <span class="untested" id="untestedBadge" hidden>NASA hasn't tested here</span>
         </div>
-        <label class="ctl"><div class="row"><span>Oxygen O<sub>2</sub></span><b class="mono" id="vO2">21%</b></div>
-          <input id="o2" type="range" min="15" max="40" value="21" step="1"></label>
-        <label class="ctl"><div class="row"><span>Airflow</span><b class="mono" id="vFlow">10 cm/s</b></div>
-          <input id="flow" type="range" min="0" max="50" value="10" step="1"></label>
-        <label class="ctl"><div class="row"><span>Material thickness</span><b class="mono" id="vThick">0.5 mm</b></div>
-          <input id="thick" type="range" min="1" max="30" value="5" step="1"></label>
+        <label class="ctl"><div class="row"><span>Material</span><span class="st" id="matInfo"></span></div>
+          <select id="material" class="select" aria-label="Material from the NASA dataset"><option>Loading materials…</option></select></label>
+        <label class="ctl"><div class="row"><span>Oxygen O<sub>2</sub> <span class="st" id="sO2"></span></span><b class="mono" id="vO2">21%</b></div>
+          <input id="o2" type="range" min="10" max="45" value="21" step="0.5"></label>
+        <label class="ctl"><div class="row"><span>Pressure <span class="st" id="sKpa"></span></span><b class="mono" id="vKpa">101 kPa</b></div>
+          <input id="kpa" type="range" min="20" max="340" value="101" step="0.5"></label>
+        <label class="ctl"><div class="row"><span>Airflow <span class="st" id="sFlow"></span></span><b class="mono" id="vFlow">10 cm/s</b></div>
+          <input id="flow" type="range" min="0" max="30" value="10" step="1"></label>
+        <label class="ctl" id="thickCtl"><div class="row"><span>Thickness <span class="st" id="sThick"></span></span><b class="mono" id="vThick">0.50 mm</b></div>
+          <input id="thick" type="range" min="0" max="100" value="38.4" step="0.2"></label>
+        <p class="legend"><i class="sw ok"></i>tested by NASA <i class="sw no"></i>not tested</p>
         <div class="presets" aria-label="Presets">
-          <button class="chip" data-p="21,10,5">ISS air</button>
-          <button class="chip" data-p="30,5,2">Enriched O₂</button>
-          <button class="chip" data-p="17,0,20">Near extinction</button>
+          <button class="chip" data-p="21,101,10" data-e="space">ISS cabin · 21% / 101 kPa</button>
+          <button class="chip" data-p="34,56.5,10" data-e="moon">Lunar base · 34% / 56.5 kPa</button>
+          <button class="chip" data-p="15,101,0">Near extinction</button>
         </div>
-        <p class="hint">Thinner material and more oxygen speed up the flame front.</p>
-        <p class="phys" id="physNote" aria-live="polite"></p>
       </div>
       <div class="viz">
-        <div class="canvas"><canvas id="flame" role="img" aria-label="Flame visualisation"></canvas><span class="tag" id="envLabel">Microgravity · blue spherical flame</span></div>
+        <div class="canvas" id="scene3d"><span class="illus">Illustration</span>
+          <p class="no3d" id="no3d" hidden>3D view needs WebGL, which this browser does not provide. The NASA test data around it still works.</p></div>
         <div class="readout">
-          <div><small>Flame front</small><b class="mono"><span id="spread">0</span></b> <small style="display:inline">mm/s</small></div>
-          <div><small>Self-extinction</small><b class="mono" id="quench">—</b></div>
-          <div><small>Hazard (illustrative)</small><b id="riskTxt">—</b></div>
+          <div><small>Flame front · NASA</small><b class="mono" id="rSpread">—</b></div>
+          <div><small>Outcome · NASA</small><b id="rOutcome">—</b></div>
+          <div><small>Burn time · NASA</small><b class="mono" id="rBurn">—</b></div>
         </div>
+        <div class="nearest" id="nearest" aria-live="polite"><small>Closest real test</small><p class="nt">Loading…</p></div>
       </div>
     </div>
   </div>
@@ -299,6 +364,10 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
     </label>
     <div class="bar">
       <div id="recChips" style="display:flex;gap:8px;flex-wrap:wrap" role="group" aria-label="Filter by experiment"></div>
+      <div class="dl" role="group" aria-label="Download the filtered records">
+        <a class="chip" id="dlCsv" href="/api/export?format=csv" download>↓ CSV</a>
+        <a class="chip" id="dlXlsx" href="/api/export?format=xlsx" download>↓ Excel</a>
+      </div>
       <div class="pager">
         <button id="recPrev" aria-label="Previous page">←</button>
         <span class="mono" id="recPage">—</span>
@@ -318,7 +387,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
 
 <footer>
   <div class="wrap">
-    <p>Flame in Freefall · NASA Space Apps 2026. Educational project, not a substitute for NASA-STD-6001.</p>
+    <p>MicroFlame · NASA Space Apps 2026 · “Flame in Freefall” challenge. Educational project, not a substitute for NASA-STD-6001.</p>
     <p><a href="https://psi.nasa.gov/" target="_blank" rel="noopener">NASA PSI ↗</a></p>
   </div>
 </footer>
@@ -371,183 +440,142 @@ function countUp(node,to){
   (function step(t){const k=Math.min(1,(t-t0)/900);node.textContent=Math.round(to*(1-Math.pow(1-k,3))).toLocaleString('en');if(k<1)requestAnimationFrame(step)})(t0);
 }
 
-/* ---------- Simulator model (simplified, illustrative) ---------- */
-let micro=true,target=null;
-function model(){
-  const o2=+$('o2').value,flow=+$('flow').value,th=+$('thick').value/10;
-  const ox=Math.max(0,(o2-14)/26);
-  const flowF=micro?(0.55+1.1*Math.exp(-Math.pow((flow-6)/10,2))):(0.7+flow/60);
-  const thinF=1.5/(0.6+th);
-  const spread=Math.max(0,Math.round(ox*ox*14*flowF*thinF*10)/10);
-  const risk=Math.min(100,Math.round(spread*7+(o2>30?12:0)));
-  const quenchSec=risk<18?Math.round(3+risk*.6):null;
-  return {o2,flow,th,spread,risk,quenchSec};
+/* ---------- Simulator: environment, material coverage, NASA data ----------
+   No risk model here: the 3D scene is an illustration driven only by gravity (environments.json)
+   and the airflow slider. Every NUMBER on screen comes from a real FireGap test; otherwise
+   it says there is no data. */
+let env='space',ENVS=null,MATS=[],mat=null,near=null,nearTicket=0,nearTimer,target=null;
+// Thickness slider is logarithmic: 0..100 -> 0.05..20 mm (dataset spans 0.07-19 mm).
+const thickMM=v=>0.05*Math.pow(400,v/100), thickPos=mm=>Math.log(mm/0.05)/Math.log(400)*100;
+function readSliders(){
+  return {o2:+$('o2').value,kpa:+$('kpa').value,flow:+$('flow').value,th:thickMM(+$('thick').value),solid:!mat||mat.kind==='solid'};
 }
-function paint(i){const n=$(i);n.style.setProperty('--p',((n.value-n.min)/(n.max-n.min)*100)+'%')}
+function inBands(v,bands){return bands.some(([a,b])=>v>=a-1e-9&&v<=b+1e-9)}
+// Paint NASA coverage onto a slider track: solid where tested, transparent (stripes show) elsewhere.
+function paintCoverage(id,bands,toPos=v=>v){
+  const n=$(id),min=+n.min,max=+n.max,pct=v=>Math.max(0,Math.min(100,(toPos(v)-min)/(max-min)*100));
+  if(!bands.length){n.style.setProperty('--cov','linear-gradient(transparent,transparent)');return}
+  const stops=[];bands.forEach(([a,b])=>{const pa=pct(a),pb=Math.max(pct(b),pa+0.8);stops.push(`transparent ${pa}%`,`var(--covc) ${pa}%`,`var(--covc) ${pb}%`,`transparent ${pb}%`)});
+  n.style.setProperty('--cov',`linear-gradient(90deg,transparent 0%,${stops.join(',')},transparent 100%)`);
+}
+function setStatus(id,state){const s=$(id);s.className='st '+(state||'');s.textContent=state==='ok'?'tested':state==='no'?'untested':state==='na'?'not recorded':''}
+function applyMaterial(){
+  const c=mat?mat.coverage:{o2:[],pressure:[],flow:[],thickness:[]};
+  paintCoverage('o2',c.o2);paintCoverage('kpa',c.pressure);paintCoverage('flow',c.flow);paintCoverage('thick',c.thickness,thickPos);
+  const solid=!mat||mat.kind==='solid';
+  $('thick').disabled=!solid;$('thickCtl').title=solid?'':'Not applicable to gas jets and droplets';
+  $('matInfo').textContent=mat?`${mat.tests} tests · ${mat.experiments.join(', ')}`:'';
+  $('matInfo').className='st na';
+}
 function updateSim(){
-  ['o2','flow','thick'].forEach(paint);
-  const m=model();
-  $('vO2').textContent=m.o2+'%';
-  $('vFlow').textContent=m.flow+' cm/s';
-  $('vThick').textContent=m.th.toFixed(1)+' mm';
-  $('spread').textContent=m.spread.toFixed(1);
-  $('quench').textContent=m.quenchSec===null?'keeps burning':'≈ '+m.quenchSec+' s';
-  const [lab,col]=m.risk<25?['Low','var(--ok)']:m.risk<55?['Medium','#e3a21a']:['High','var(--accent)'];
-  $('riskTxt').textContent=lab;$('riskTxt').style.color=col;
-  target=m;
-}
-['o2','flow','thick'].forEach(i=>$(i).addEventListener('input',updateSim));
-function setEnv(m){micro=m;$('gMicro').setAttribute('aria-pressed',m);$('gEarth').setAttribute('aria-pressed',!m);
-  $('envLabel').textContent=m?'Microgravity · blue spherical flame':'Earth · yellow elongated flame';smoke.length=0;updateSim()}
-$('gMicro').onclick=()=>setEnv(true);$('gEarth').onclick=()=>setEnv(false);
-document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{
-  const [o,f,t]=b.dataset.p.split(',');$('o2').value=o;$('flow').value=f;$('thick').value=t;updateSim()});
-
-/* ---------- Spirit lamp + flame + smoke (illustrative physics) ----------
-   Microgravity: no buoyancy -> O2 arrives only by diffusion, cooler flame,
-   almost no soot -> dim blue sphere (CH and C2 radical chemiluminescence). Products
-   are not carried up; they spread slowly in every direction / drift with flow.
-   Earth: buoyant plume -> elongated flame, glowing soot (yellow), smoke rises.
-   Extinction: unburnt fuel vapour condenses into white "smoke" off the wick. */
-const cv=$('flame'),cx=cv.getContext('2d');
-let size=0,alive=1,t=0,last=performance.now(),vapor=0,ember=0,noteKey='';
-const smoke=[];
-function fit(){const r=cv.getBoundingClientRect(),d=devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;cx.setTransform(d,0,0,d,0,0)}
-new ResizeObserver(fit).observe(cv);
-const isOut=()=>target&&target.spread<0.3;
-function sootiness(){
-  if(!target)return 0;
-  return micro?Math.max(0,(target.o2-24)/16)*.8+target.flow/50*.25
-              :.12+size*.7+(target.o2>28?.2:0);
-}
-function spawn(x,y,kind,fl){
-  if(smoke.length>420)return;
-  const a=Math.random()*Math.PI*2,s=micro?6+Math.random()*10:0;
-  smoke.push({x,y,kind,life:0,
-    max:micro?5+Math.random()*3:(kind==='vapor'?3.2:2.6)+Math.random(),
-    vx:micro?Math.cos(a)*s+fl*40:(Math.random()-.5)*8+fl*30,
-    vy:micro?Math.sin(a)*s:-30-Math.random()*20,
-    r:micro?2:1.5,seed:Math.random()*10});
-}
-function updateNote(soot){
-  const key=(micro?'m':'e')+(isOut()?'0':'1')+(soot>.25?'s':'');
-  if(key===noteKey)return;noteKey=key;
-  $('envLabel').textContent=(micro?'Microgravity · ':'Earth · ')+(isOut()?'flame out'
-    :micro?'blue spherical flame':'yellow elongated flame');
-  $('physNote').textContent=isOut()
-    ?(micro?'The flame is out. Fuel vapour condenses into a white cloud that slowly spreads in every direction: there is no buoyancy.'
-           :'The flame is out. A white wisp rises from the wick: condensed fuel vapour, not soot.')
-    :micro?'Blue flame: without convection oxygen arrives only by diffusion, the flame is cooler, there is almost no soot, and CH and C₂ radicals glow blue. Smoke does not rise; it stays as a cloud around the wick.'
-           +(soot>.25?' With excess O₂ or strong airflow soot forms: a yellow core appears near the wick.':'')
-         :'On Earth hot gas rises: the flame stretches upward, soot glows yellow-orange, and smoke climbs in a column.';
-}
-function geom(w,h){
-  const by=h-18,bh=Math.min(h*.24,120),bw=bh*1.3,wx=w/2,ch=bh*.2,cw=bw*.3,wl=bh*.13,top=by-bh;
-  return {by,bh,bw,wx,ch,cw,wl,top,wy:top-ch+2-wl};
-}
-function drawLamp(w,h){
-  const {by,bh,bw,wx,ch,cw,wl,top,wy}=geom(w,h);
-  const tint=micro?'90,150,255':'255,190,90',light=alive*(.25+size*.5);
-  // light pool on the table
-  const pool=cx.createRadialGradient(wx,by,4,wx,by,bw*1.6);
-  pool.addColorStop(0,`rgba(${tint},${.18*light})`);pool.addColorStop(1,`rgba(${tint},0)`);
-  cx.fillStyle=pool;cx.fillRect(wx-bw*1.6,by-20,bw*3.2,40);
-  // glass body
-  cx.save();cx.beginPath();cx.roundRect(wx-bw/2,top,bw,bh,[bh*.45,bh*.45,bh*.18,bh*.18]);
-  const glass=cx.createLinearGradient(wx-bw/2,0,wx+bw/2,0);
-  glass.addColorStop(0,'rgba(255,255,255,.10)');glass.addColorStop(.5,'rgba(255,255,255,.03)');glass.addColorStop(1,'rgba(255,255,255,.08)');
-  cx.fillStyle=glass;cx.fill();cx.clip();
-  cx.fillStyle='rgba(120,170,255,.16)';cx.fillRect(wx-bw/2,top+bh*.42,bw,bh); // fuel
-  cx.fillStyle='rgba(170,210,255,.25)';cx.fillRect(wx-bw/2,top+bh*.42,bw,1.5);
-  cx.restore();
-  cx.strokeStyle='rgba(255,255,255,.28)';cx.lineWidth=1.2;
-  cx.beginPath();cx.roundRect(wx-bw/2,top,bw,bh,[bh*.45,bh*.45,bh*.18,bh*.18]);cx.stroke();
-  // reflection of the flame on the glass
-  const ref=cx.createLinearGradient(0,top,0,top+bh*.6);
-  ref.addColorStop(0,`rgba(${tint},${.45*light})`);ref.addColorStop(1,`rgba(${tint},0)`);
-  cx.fillStyle=ref;cx.beginPath();cx.ellipse(wx-bw*.28,top+bh*.32,bw*.05,bh*.22,-.2,0,7);cx.fill();
-  // metal collar
-  const m=cx.createLinearGradient(wx-cw/2,0,wx+cw/2,0);
-  m.addColorStop(0,'#5d5d5a');m.addColorStop(.45,'#cfcfc8');m.addColorStop(1,'#4a4a47');
-  cx.fillStyle=m;cx.beginPath();cx.roundRect(wx-cw/2,top-ch+2,cw,ch,3);cx.fill();
-  // wick: cotton at the bottom, charred at the tip
-  const wk=cx.createLinearGradient(0,wy+wl,0,wy);
-  wk.addColorStop(0,'#e9e2cf');wk.addColorStop(.55,'#8a8170');wk.addColorStop(1,'#1d1b18');
-  cx.fillStyle=wk;cx.fillRect(wx-2.5,wy,5,wl);
-  if(ember>0){cx.fillStyle=`rgba(255,90,40,${ember})`;cx.beginPath();cx.arc(wx,wy+1,2.6,0,7);cx.fill()}
-}
-function drawSmoke(dt){
-  for(let i=smoke.length-1;i>=0;i--){
-    const p=smoke[i];p.life+=dt;
-    if(p.life>p.max){smoke.splice(i,1);continue}
-    if(micro){p.vx*=.985;p.vy*=.985;p.r+=dt*3.2}          // diffusion: slows down, spreads
-    else{p.vy-=22*dt;p.vx+=Math.sin(t*1.6+p.seed)*12*dt;p.r+=dt*(p.kind==='vapor'?3:5)} // buoyant, curling
-    p.x+=p.vx*dt;p.y+=p.vy*dt;
-    const k=p.life/p.max,a=(p.kind==='vapor'?.32:.2)*Math.sin(Math.PI*Math.min(1,k*1.4))*(1-k);
-    const c=p.kind==='vapor'?'235,238,245':'150,150,155';
-    const g=cx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r);
-    g.addColorStop(0,`rgba(${c},${a})`);g.addColorStop(1,`rgba(${c},0)`);
-    cx.fillStyle=g;cx.beginPath();cx.arc(p.x,p.y,p.r,0,7);cx.fill();
+  const m=readSliders();target=m;
+  $('vO2').textContent=m.o2+'%';$('vKpa').textContent=m.kpa+' kPa';
+  $('vFlow').textContent=m.flow+' cm/s';$('vThick').textContent=m.solid?(m.th<1?m.th.toFixed(2):m.th.toFixed(1))+' mm':'n/a';
+  if(mat){
+    const c=mat.coverage;
+    setStatus('sO2',inBands(m.o2,c.o2)?'ok':'no');
+    setStatus('sKpa',inBands(m.kpa,c.pressure)?'ok':'no');
+    // Flow/thickness are often not stated: outside the tested bands that is "not recorded",
+    // and it is "untested" only when every test of this material states the condition.
+    const opt=(v,bands,miss)=>inBands(v,bands)?'ok':miss?'na':'no';
+    const miss=mat.missing||{};
+    setStatus('sFlow',opt(m.flow,c.flow,miss.flow));
+    setStatus('sThick',m.solid?opt(m.th,c.thickness,miss.thickness):'');
   }
+  clearTimeout(nearTimer);nearTimer=setTimeout(fetchNearest,140);
 }
-function drawFlame(wx,wy,w,h,soot){
-  if(alive<.01)return;
-  const fl=target?target.flow/50:0;
-  cx.save();cx.globalCompositeOperation='lighter';cx.globalAlpha=alive;
-  if(micro){
-    const R=12+size*Math.min(w,h)*.2,breathe=1+(reduce?0:Math.sin(t*1.3)*.015); // steady: no buoyant flicker
-    cx.translate(wx+fl*R*.55,wy-R*.45);cx.scale((1+fl*.9)*breathe,(1-fl*.15)*breathe);
-    const g=cx.createRadialGradient(0,0,R*.1,0,0,R*1.8);
-    g.addColorStop(0,'rgba(40,90,255,0)');g.addColorStop(.42,'rgba(50,110,255,.22)');
-    g.addColorStop(.6,'rgba(110,165,255,.6)');g.addColorStop(.72,'rgba(60,110,255,.22)');g.addColorStop(1,'rgba(20,40,160,0)');
-    cx.fillStyle=g;cx.beginPath();cx.arc(0,0,R*1.8,0,7);cx.fill();
-    if(soot>.08){ // soot core appears with excess O2 / forced flow
-      const s=cx.createRadialGradient(R*.25,0,0,R*.25,0,R*.7);
-      s.addColorStop(0,`rgba(255,200,110,${Math.min(.9,soot)})`);s.addColorStop(1,'rgba(255,120,40,0)');
-      cx.fillStyle=s;cx.beginPath();cx.arc(R*.25,0,R*.7,0,7);cx.fill();
-    }
+async function fetchNearest(){
+  if(!mat)return;
+  const m=target,ticket=++nearTicket;
+  const q=new URLSearchParams({material:mat.id,o2:m.o2,pressure:m.kpa,flow:m.flow});
+  if(m.solid)q.set('thickness',m.th.toFixed(3));
+  let d;
+  try{d=await api('/api/sim/nearest?'+q)}
+  catch(e){if(ticket===nearTicket){near=null;$('nearest').replaceChildren(el('small',null,'Closest real test'),el('p','nt','Test data unavailable: '+e.message))}return}
+  if(ticket!==nearTicket)return;
+  near=d;
+  // A rendering bug must not be reported as missing data: log it and say so plainly.
+  try{renderNearest()}
+  catch(e){console.error('renderNearest failed',e);$('nearest').replaceChildren(el('small',null,'Closest real test'),el('p','nt','Display error — reload the page (Ctrl+F5).'))}
+}
+const fmt=(v,d=1)=>v==null?null:(+v).toFixed(d).replace(/\.0+$/,'');
+function setReadout(id,text){const b=$(id);b.textContent=text??'not in NASA data';b.classList.toggle('nodata',text==null)}
+function renderNearest(){
+  const box=$('nearest'),t=near&&near.test,ok=!!(near&&near.within);
+  $('simPanel').classList.toggle('out',!ok);$('untestedBadge').hidden=ok;
+  // Numbers only from a test inside tolerance; otherwise say so.
+  setReadout('rSpread',ok&&t.spread_rate_mm_s!=null?fmt(t.spread_rate_mm_s)+' mm/s':null);
+  setReadout('rOutcome',ok&&t.outcome_text?(t.outcome==='extinguished'?'self-extinguished':t.outcome==='burned'?'kept burning':t.outcome_text.split(/[;(]/)[0].trim()):null);
+  setReadout('rBurn',ok&&t.burn_time_s!=null?fmt(t.burn_time_s)+' s':null);
+  const p=el('p','nt');
+  if(!t){p.textContent='No '+(mat?mat.label:'')+' test states both O₂ and pressure.';box.replaceChildren(el('small',null,'Closest real test'),p);return}
+  const cond=`O₂ ${t.o2[0]===t.o2[1]?fmt(t.o2[0]):fmt(t.o2[0])+'–'+fmt(t.o2[1])}% · ${fmt(t.pressure_kpa)} kPa${t.pressure_assumed?' (assumed)':''} · flow ${t.flow_cm_s==null?'not recorded':fmt(t.flow_cm_s)+' cm/s'}${t.thickness_mm!=null?' · '+fmt(t.thickness_mm,2)+' mm':''}`;
+  if(!ok){
+    const g=near.gaps,miss=[];
+    if(g.o2>0)miss.push(`O₂ off by ${fmt(g.o2)} pts`);
+    if(g.pressure>5)miss.push(`pressure off by ${fmt(g.pressure,0)} kPa`);
+    if(g.flow>5)miss.push(`flow off by ${fmt(g.flow,0)} cm/s`);
+    if(g.thickness>1.5)miss.push(`thickness ×${fmt(g.thickness)}`);
+    p.append(el('span','warn','Not in NASA data. '),document.createTextNode('No '+mat.label+' test within ±1% O₂ and ±5 kPa. Nearest: '));
+    p.append(el('b',null,`${t.experiment} ${t.test_id}`),document.createTextNode(` (${cond})`+(miss.length?' — '+miss.join(', ')+'.':'.')));
   }else{
-    const fk=reduce?0:Math.sin(t*9)*.5+Math.sin(t*15.7)*.3+Math.sin(t*4.1)*.2; // buoyant flicker
-    const H=(26+size*Math.min(h*.42,240))*(1+fk*.07),W=H*.27,dx=fk*W*.18+fl*W*.7;
-    const glow=cx.createRadialGradient(wx,wy-H*.45,0,wx,wy-H*.45,H*.9);
-    glow.addColorStop(0,'rgba(255,170,60,.22)');glow.addColorStop(1,'rgba(255,120,40,0)');
-    cx.fillStyle=glow;cx.beginPath();cx.arc(wx,wy-H*.45,H*.9,0,7);cx.fill();
-    cx.beginPath();cx.moveTo(wx,wy+W*.35);
-    cx.bezierCurveTo(wx-W*1.1,wy,wx-W*.55,wy-H*.6,wx+dx,wy-H);
-    cx.bezierCurveTo(wx+W*.55,wy-H*.6,wx+W*1.1,wy,wx,wy+W*.35);
-    const f=cx.createLinearGradient(0,wy+W*.35,0,wy-H);
-    f.addColorStop(0,'rgba(60,110,255,.9)');f.addColorStop(.12,'rgba(120,160,255,.45)');
-    f.addColorStop(.24,'rgba(255,235,170,.95)');f.addColorStop(.55,'rgba(255,180,70,.9)');
-    f.addColorStop(.85,'rgba(255,110,40,.45)');f.addColorStop(1,'rgba(255,80,30,0)');
-    cx.fillStyle=f;cx.fill();
+    const res=[t.outcome_text,t.spread_rate_mm_s!=null&&`spread ${fmt(t.spread_rate_mm_s)} mm/s`,t.burn_time_s!=null&&`burn time ${fmt(t.burn_time_s)} s`].filter(Boolean);
+    p.append(el('b',null,`${t.experiment} · test ${t.test_id}`),document.createTextNode(` — ${t.material}. ${cond}. Result: ${res.length?res.join(', '):'not recorded in a structured field'}.`));
+    if(t.observations){const o=el('span','q');o.append(el('b',null,'Crew observations: '),document.createTextNode('“'+t.observations+'”'));p.append(o)}
+    if(near.n_within>1)p.append(el('span','q',`${near.n_within} tests match these conditions`+(res.length||t.observations?'; showing one with a recorded result.':'.')));
   }
-  cx.restore();
+  if(t.data_quality_note)p.append(el('span','q','Data note: '+t.data_quality_note));
+  const open=el('button',null,'Open full record →');open.type='button';open.onclick=()=>openDetail(t.id);
+  box.replaceChildren(el('small',null,'Closest real test'),p,open);
 }
-function draw(now){
-  const dt=Math.min(.05,((now||performance.now())-last)/1000);last=now||performance.now();
-  const w=cv.clientWidth,h=cv.clientHeight;cx.clearRect(0,0,w,h);
-  if(target)size+=((Math.min(1,target.spread/16))-size)*.08;
-  t+=reduce?0:dt;
-  const out=isOut(),prev=alive;
-  alive+=((out?0:1)-alive)*(out?.06:.1);
-  if(out&&prev>.5&&alive<=.5){vapor=2.8;ember=1} // just went out
-  if(!out){vapor=0}
-  ember=Math.max(0,ember-dt*.35);
-  const soot=sootiness(),fl=target?target.flow/50:0;
-  const {wx,wy}=geom(w,h);
-  // emit smoke
-  if(!reduce){
-    if(alive>.3&&Math.random()<soot*(micro?.5:.9)*dt*40){
-      if(micro){const R=12+size*Math.min(w,h)*.2,a=Math.random()*7;spawn(wx+fl*R*.55+Math.cos(a)*R,wy-R*.45+Math.sin(a)*R,'soot',fl)}
-      else{const H=26+size*Math.min(h*.42,240);spawn(wx+(Math.random()-.5)*4+fl*H*.2,wy-H,'soot',fl)}
-    }
-    if(vapor>0){vapor-=dt;if(Math.random()<dt*45)spawn(wx+(Math.random()-.5)*3,wy-2,'vapor',fl*.3)}
-  }
-  drawSmoke(dt);
-  drawFlame(wx,wy,w,h,soot); // behind the lamp: the glass hides the flame's lower edge
-  drawLamp(w,h);
-  updateNote(soot);
-  requestAnimationFrame(draw);
+async function loadMaterials(){
+  try{
+    const d=await api('/api/sim/materials');MATS=d.materials;
+    // Group headings say what kind of fuel it is; the server already sorts each group
+    // (most tests first, "material not stated" last).
+    const sel=$('material'),groups={solid:'Solid samples (BASS, Saffire)',droplet:'Fuel droplets (FLEX)',gas:'Gas flames (ACME)',rig:'Burner rigs (ACME BRE)'};
+    sel.replaceChildren(...Object.entries(groups).map(([k,label])=>{
+      const g=document.createElement('optgroup');g.label=label;
+      MATS.filter(x=>x.kind===k).forEach(x=>{const o=el('option',null,`${x.label} · ${x.tests} tests`);o.value=x.id;g.append(o)});return g}).filter(g=>g.children.length));
+    mat=MATS.find(x=>x.id==='pmma')||MATS[0];sel.value=mat.id;
+    sel.onchange=()=>{mat=MATS.find(x=>x.id===sel.value);applyMaterial();updateSim()};
+    applyMaterial();updateSim();
+  }catch(e){$('material').replaceChildren(el('option',null,'Materials unavailable'));$('nearest').replaceChildren(el('small',null,'Closest real test'),el('p','nt','Test data unavailable: '+e.message))}
+}
+['o2','kpa','flow','thick'].forEach(i=>$(i).addEventListener('input',updateSim));
+
+/* ---------- Environments (gravity from environments.json) ---------- */
+const envObj=()=>ENVS&&ENVS.environments.find(e=>e.id===env);
+const ENV_NAME={earth:'Earth',moon:'Moon',mars:'Mars',space:'Open space'};
+function setEnv(id){
+  env=id;
+  document.querySelectorAll('[data-env]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.env===id));
+  const e=envObj();
+  $('envInfo').textContent=e?`${ENV_NAME[id]} · g = ${e.g_ms2} m/s²`:ENV_NAME[id];
+  updateSim();
+}
+document.querySelectorAll('[data-env]').forEach(b=>b.onclick=()=>setEnv(b.dataset.env));
+document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{
+  const [o,k,f]=b.dataset.p.split(',');$('o2').value=o;$('kpa').value=k;$('flow').value=f;
+  if(b.dataset.e)setEnv(b.dataset.e);else updateSim()});
+
+// The flame goes out only when a matching real test says it self-extinguished (no model decides).
+let outKey='',outAt=Infinity;
+function flameOut(){
+  const t=near&&near.within&&near.test;
+  if(!t||t.outcome!=='extinguished'){outKey='';return false}
+  const key=t.id+env;
+  if(key!==outKey){outKey=key;outAt=performance.now()+3500}
+  return performance.now()>outAt;
+}
+const matSoot=()=>mat?mat.soot:.45;
+// Shared state for the 3D scene (js/cabin3d.js reads it every frame).
+window.flameState=()=>{const e=envObj(),m=target||readSliders();
+  return {env,g:e?e.g_ms2:0,gEarth:9.80665,flow:m.flow,soot:matSoot(),out:flameOut(),solid:m.solid,thick:m.th}};
+
+async function loadKnowledge(){
+  // gravity per environment (environments.json) drives the 3D scene
+  try{ENVS=await api('/api/knowledge/environments');setEnv(env)}catch(e){console.error('gravity data unavailable',e)}
 }
 
 /* ---------- Backend API (relative: FastAPI or Vite proxy) ---------- */
@@ -628,6 +656,11 @@ async function loadRecords(){
   const q=new URLSearchParams({limit:rec.limit,offset:rec.offset});
   if(rec.filter){q.set('filter_field','experiment');q.set('filter_value',rec.filter)}
   if(rec.q)q.set('q',rec.q);
+  // Downloads export exactly what the table shows (same filter and search), all rows and columns.
+  const ex=new URLSearchParams();
+  if(rec.filter){ex.set('filter_field','experiment');ex.set('filter_value',rec.filter)}
+  if(rec.q)ex.set('q',rec.q);
+  ['csv','xlsx'].forEach(f=>{ex.set('format',f);$(f==='csv'?'dlCsv':'dlXlsx').href='/api/export?'+ex});
   const ticket=++loadTicket;
   try{
     const d=await api('/api/experiments?'+q);
@@ -790,7 +823,25 @@ $('chatForm').addEventListener('submit',e=>{e.preventDefault();sendChat()});
 
 api('/api/metadata').then(m=>{countUp($('statTotal'),m.total);countUp($('statCols'),(m.columns||[]).length)})
   .catch(()=>{$('statTotal').textContent=$('statCols').textContent='n/a'});
-updateSim();draw();loadCatalogue();loadRecords();
+updateSim();loadMaterials();loadKnowledge();loadCatalogue();loadRecords();
+</script>
+<script type="importmap">{"imports":{"three":"/vendor/three.module.js"}}</script>
+<script type="module">
+// 3D cabin; without WebGL a short notice is shown instead.
+const host = document.getElementById('scene3d');
+let gl = null;
+try { gl = document.createElement('canvas').getContext('webgl2') || document.createElement('canvas').getContext('webgl'); } catch {}
+if (!gl) {
+  document.getElementById('no3d').hidden = false;
+} else {
+  try {
+    const { initCabin } = await import('/js/cabin3d.js');
+    window.cabin3d = await initCabin(host, window.flameState);
+  } catch (err) {
+    console.error('3D scene failed', err);
+    document.getElementById('no3d').hidden = false;
+  }
+}
 </script>
 </body>
 </html>

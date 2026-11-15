@@ -185,8 +185,11 @@ class OfflineTests(unittest.TestCase):
         data = list_records(limit=1)
         self.assertFalse(data['is_test_data'])
         self.assertEqual(data['pagination']['total'], 1372)
-        self.assertEqual(len(metadata()['columns']), 61)
+        columns = [c['name'] for c in metadata()['columns']]
+        self.assertEqual(len(columns), 62)                 # 61 source columns + gravity_regime
+        self.assertEqual(columns[-1], 'gravity_regime')
         record = data['experiments'][0]
+        self.assertEqual(record['values']['gravity_regime'], 'microgravity')
         self.assertEqual(experiment(record['id'])['experiment'], record)
         self.assertIn('data_quality_note', record['values'])
         self.assertEqual(list_records(filter_field='experiment', filter_value='FLEX')['pagination']['total'], 274)

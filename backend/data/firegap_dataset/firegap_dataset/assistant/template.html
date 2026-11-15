@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FireGap — что NASA знает про огонь в ваших условиях</title>
+<style>
+:root{--surf:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--grid:#e4e3df;--blue:#2a78d6;--orange:#eb6834;--aqua:#1baf7a;--yellow:#eda100;--red:#c0392b}
+*{box-sizing:border-box}body{margin:0;background:var(--surf);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:920px;margin:0 auto;padding:22px 18px 48px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:var(--ink2);margin:0 0 18px}
+.panel{border:1px solid var(--grid);border-radius:10px;padding:14px 16px;background:#fff;margin-bottom:14px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:end}label{font-size:13px;color:var(--ink2);display:block;margin-bottom:3px}
+input{font:inherit;padding:7px 9px;border:1px solid #c9c8c3;border-radius:7px;width:130px}
+button{font:inherit;padding:7px 12px;border:1px solid #c9c8c3;border-radius:7px;background:#fff;cursor:pointer}button:hover{background:#f3f2ee}
+button.go{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.chips small{color:var(--ink2);align-self:center}
+.verdict{border-left:5px solid var(--ink);padding:12px 14px;border-radius:6px;background:#f6f5f1;margin-bottom:14px}
+.verdict.none{border-color:var(--red);background:#fbefed}.verdict.indirect{border-color:var(--yellow);background:#fdf6e4}.verdict.solid{border-color:var(--aqua);background:#eaf7f1}
+.verdict b.t{display:block;font-size:17px;margin-bottom:4px}
+.fam{border:1px solid var(--grid);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fff}
+.fam h3{margin:0 0 2px;font-size:15px;display:flex;gap:8px;align-items:center}.badge{font-size:12px;padding:2px 8px;border-radius:99px;background:#eee;color:var(--ink2);white-space:nowrap}
+.badge.data{background:#d9f1e6;color:#0b5a3c}.badge.few{background:#fdeec2;color:#7a5600}.badge.near,.badge.none{background:#f4dcd8;color:#8a2a1f}
+.fam p{margin:5px 0}.ex{margin:6px 0 0;padding:0;list-style:none}.ex li{padding:6px 0;border-top:1px dashed var(--grid)}
+.src{color:var(--ink2);font-size:12.5px}.warn{color:#8a2a1f;font-size:12.5px}
+svg text{font:11px system-ui,sans-serif;fill:#52514e}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin-top:4px}
+.foot{color:var(--ink2);font-size:12.5px;margin-top:16px}
+</style></head><body><main>
+<h1>FireGap</h1>
+<p class="sub">Введите условия — ответ строится только по реальным тестам NASA из датасета. Если подходящих тестов нет, оценка не даётся.</p>
+<div class="panel">
+ <div class="row">
+  <div><label for="o2">Кислород, %</label><input id="o2" type="number" step="0.1" value="26.5"></div>
+  <div><label for="p">Давление, кПа</label><input id="p" type="number" step="0.1" value="70.3"></div>
+  <button class="go" id="go">Оценить</button>
+ </div>
+ <div class="chips"><small>Примеры:</small>
+  <button data-o="21" data-p="101.3">МКС сейчас: 21% / 101 кПа</button>
+  <button data-o="26.5" data-p="70.3">26,5% / 10,2 psi (BRE)</button>
+  <button data-o="34" data-p="56.5">34% / 8,2 psi (BRE)</button>
+  <button data-o="30" data-p="50">30% / 50 кПа</button>
+  <button data-o="21" data-p="60">21% / 60 кПа</button>
+ </div>
+</div>
+<div id="out"></div>
+<div class="panel"><svg id="map" viewBox="0 0 860 330" width="100%" role="img" aria-label="Карта протестированных условий"></svg>
+<div class="legend" id="leg"></div></div>
+<p class="foot">«Те же условия» = ±2 п.п. кислорода и ±10% давления; «рядом» = ±5 п.п. и ±25%. Это правило датасета, а не научный критерий. Данные BRE прочитаны из текста диссертации. Исходы показаны только там, где они есть в таблицах NASA. Это учебный проект NASA Space Apps, а не инструмент пожарной безопасности и не оценка NASA.</p>
+</main>
+<script>
+/*DATA*/
+/*ENGINE*/
+const COL={solid:["#eb6834","s"],droplet:["#2a78d6","o"],gas:["#1baf7a","^"],burner:["#eda100","d"]};
+const $=id=>document.getElementById(id);
+function esc(s){return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
+function srcLine(r){const s=DATA.studies[r.psi]||{};return `<span class="src">${esc(r.psi)} · ${esc(s.acr||r.exp)} · тест ${esc(r.id)}${s.doi?` · <a href="${esc(s.doi)}" target="_blank" rel="noopener">источник PSI</a>`:""}</span>`}
+const LEVEL={data:"данные есть",few:"мало данных",near:"только рядом",none:"данных нет"};
+function render(){
+  const o2=parseFloat($("o2").value),p=parseFloat($("p").value);
+  if(!isFinite(o2)||!isFinite(p)||p<=0){$("out").innerHTML='<div class="verdict none"><b class="t">Введите кислород и давление</b></div>';return}
+  const a=assess(DATA,o2,p);let h="";
+  const V={
+   none:["Оценку риска дать не могу","В датасете NASA нет ни одного теста при таких условиях (в пределах ±2 п.п. кислорода и ±10% давления). Любая цифра была бы выдумкой, поэтому ниже только ближайшие реальные тесты."],
+   indirect:["Для твёрдых материалов при этих условиях данных нет","Есть только косвенные данные (горелка, газовые пламёна или капли). Они показывают, как ведёт себя пламя, но не как горит конкретный материал."],
+   solid:["Тесты на твёрдых материалах при этих условиях есть","Но исход в таблицах NASA не оформлен (у BASS это свободные записи операторов, у BASS-II исхода нет), поэтому вывода «горит / не горит» нет, ниже только записи."]};
+  h+=`<div class="verdict ${a.verdict}"><b class="t">${V[a.verdict][0]}</b>${V[a.verdict][1]}<br><span class="src">Условия запроса: ${fmt(o2)}% O₂, ${fmt(p)} кПа</span></div>`;
+  for(const f of a.families){
+    h+=`<div class="fam"><h3>${f.label} <span class="badge ${f.level}">${LEVEL[f.level]}${f.nClose?` · ${f.nClose}`:f.nNear?` · ${f.nNear} рядом`:""}</span></h3>`;
+    if(f.rangeO2)h+=`<p class="src">Протестировано: ${fmt(f.rangeO2[0])}–${fmt(f.rangeO2[1])}% O₂, ${fmt(f.rangeP[0],0)}–${fmt(f.rangeP[1],0)} кПа (всего ${f.total} тестов)</p>`;
+    if(f.nClose&&f.classified){const c=f.counts;h+=`<p>В ${f.classified} из ${f.nClose} тестов при тех же условиях исход известен: ${c.ext} — ${OUTCOME_TEXT.ext}, ${c.sust} — ${OUTCOME_TEXT.sust}, ${c.none} — ${OUTCOME_TEXT.none}.</p>`}
+    else if(f.nClose)h+=`<p>При тех же условиях ${f.nClose} тестов, но исход в таблицах не оформлен.</p>`;
+    else if(f.nearest){const n=f.nearest,d=f.nearestDist;const po=Math.abs(d.dO2)<0.05?"кислород совпадает":`кислород на ${fmt(Math.abs(d.dO2))} п.п. ${d.dO2>0?"выше":"ниже"}`;h+=`<p>При тех же условиях тестов нет. Ближайший тест: ${po}, давление на ${fmt(Math.abs(d.pRatio-1)*100,0)}% ${d.pRatio>=1?"выше":"ниже"}, чем в вашем запросе.</p>`}
+    if(f.examples.length){h+=`<p style="margin-bottom:0">${f.nClose?"Ближайшие реальные тесты:":"Ближайшие тесты (не те же условия):"}</p><ul class="ex">`;
+      for(const r of f.examples)h+=`<li>${esc(describe(r))}<br>${srcLine(r)}${r.flag?` <span class="warn" title="${esc(r.note)}">· у строки есть оговорка по качеству данных (наведите курсор)</span>`:""}</li>`;h+="</ul>"}
+    h+="</div>"}
+  $("out").innerHTML=h;draw(o2,p);
+}
+function draw(o2,p){
+  const W=860,H=330,L=54,R=14,T=12,B=40,x0=10,x1=42,y0=40,y1=320;
+  const X=v=>L+(v-x0)/(x1-x0)*(W-L-R),Y=v=>H-B-(v-y0)/(y1-y0)*(H-T-B);
+  let s="";
+  for(let v=10;v<=40;v+=5)s+=`<line x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${H-B}" stroke="#e4e3df"/><text x="${X(v)}" y="${H-B+16}" text-anchor="middle">${v}</text>`;
+  for(let v=50;v<=300;v+=50)s+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e4e3df"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end">${v}</text>`;
+  s+=`<text x="${(L+W-R)/2}" y="${H-6}" text-anchor="middle">Кислород, %</text><text transform="translate(12 ${(T+H-B)/2}) rotate(-90)" text-anchor="middle">Давление, кПа</text>`;
+  const seen=new Set();
+  for(const r of DATA.tests){const k=r.fam+Math.round(r.o2*2)+"|"+Math.round(r.p/4);if(seen.has(k))continue;seen.add(k);
+    const [c,m]=COL[r.fam],cx=X(r.o2),cy=Y(Math.min(r.p,y1));
+    s+=m==="o"?`<circle cx="${cx}" cy="${cy}" r="3.4" fill="${c}" fill-opacity=".7"/>`:m==="s"?`<rect x="${cx-3.2}" y="${cy-3.2}" width="6.4" height="6.4" fill="${c}" fill-opacity=".7"/>`:m==="^"?`<path d="M${cx} ${cy-4}L${cx+3.8} ${cy+3}L${cx-3.8} ${cy+3}Z" fill="${c}" fill-opacity=".7"/>`:`<path d="M${cx} ${cy-4.2}L${cx+4.2} ${cy}L${cx} ${cy+4.2}L${cx-4.2} ${cy}Z" fill="${c}" fill-opacity=".8" stroke="#52514e" stroke-width=".6"/>`}
+  const bx=X(o2-CLOSE.dO2),bx2=X(o2+CLOSE.dO2),by=Y(p*CLOSE.pRatio),by2=Y(p/CLOSE.pRatio);
+  s+=`<rect x="${bx}" y="${by}" width="${bx2-bx}" height="${by2-by}" fill="none" stroke="#0b0b0b" stroke-dasharray="3 3"/><path d="M${X(o2)-8} ${Y(p)}h16M${X(o2)} ${Y(p)-8}v16" stroke="#0b0b0b" stroke-width="2"/>`;
+  $("map").innerHTML=s;
+}
+$("leg").innerHTML=[["solid","Твёрдые"],["droplet","Капли"],["gas","Газовые пламёна"],["burner","Горелка-имитатор (BRE)"]].map(([k,t])=>`<span><b style="color:${COL[k][0]}">${{s:"■",o:"●","^":"▲",d:"◆"}[COL[k][1]]}</b> ${t}</span>`).join("")+"<span><b>＋</b> ваш запрос (пунктир — «те же условия»)</span>";
+$("go").onclick=render;
+document.querySelectorAll(".chips button").forEach(b=>b.onclick=()=>{$("o2").value=b.dataset.o;$("p").value=b.dataset.p;render()});
+["o2","p"].forEach(i=>$(i).addEventListener("keydown",e=>{if(e.key==="Enter")render()}));
+render();
+</script></body></html>

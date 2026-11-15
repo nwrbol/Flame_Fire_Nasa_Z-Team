@@ -1,4 +1,4 @@
-# Frontend API
+﻿# Frontend API
 
 Local backend: http://127.0.0.1:8001
 Interactive API: http://127.0.0.1:8001/docs
@@ -17,7 +17,7 @@ GET endpoints:
 - `/api/experiments/{id}`: detail; unknown ID returns 404.
 - `/api/metadata`: column names, conservative types, unknown units, count, filter fields.
 
-The bundled FireGap tests.csv contains 1,372 records and 61 columns. `values`
+The bundled FireGap tests.csv contains 1,372 records and 62 columns (61 source columns plus gravity_regime, set from each study's platform). `values`
 contains original strings; empty cells are empty strings, not zero. Preserve
 `data_quality_note`, `_raw`, `_assumed` and approximate flags in displays.
 `is_test_data: false` identifies the analyst-supplied dataset, not independent
@@ -41,6 +41,17 @@ const query = new URLSearchParams({filter_field: 'experiment', filter_value: 'FL
 const data = await get('/api/experiments?' + query);
 const detail = await get('/api/experiments/' + encodeURIComponent(data.experiments[0].id));
 ```
+
+Simulator: `GET /api/sim/materials` lists material families with test counts,
+tested O2 / pressure / flow / thickness ranges (tolerance included) and how many
+tests do not state each condition. `GET /api/sim/nearest?material=pmma&o2=21&pressure=101[&flow=..][&thickness=..]`
+returns the closest real test, `within` (inside В±1 % O2, В±5 kPa, В±5 cm/s, x/Г·1.5
+thickness), `n_within` and the gaps. Show numbers only when `within` is true.
+
+Download: `GET /api/export?format=csv|xlsx` with the same `filters`,
+`filter_field`/`filter_value` and `q` as the list returns every matching row and
+column (no pagination). Text cells starting with = + - @ are prefixed with ' to
+prevent spreadsheet formula injection.
 
 `q` (max 100 chars) is a free-text search: every whitespace-separated word must
 appear, case-insensitively, in some field of the record. It combines with the
@@ -197,3 +208,4 @@ against the catalogue/analyst metadata before displaying them.
 
 The API returns 414 for oversized URLs and 429 with Retry-After for its shared
 request budget. Respect Retry-After; do not retry in a tight loop.
+

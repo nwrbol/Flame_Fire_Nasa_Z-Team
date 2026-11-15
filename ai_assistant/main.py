@@ -22,7 +22,7 @@ TOP_K = 5
 MAX_HISTORY = 6
 
 SYSTEM_PROMPT = (
-    "You are the assistant of the 'Flame in Freefall' website (NASA Space Apps). "
+    "You are the assistant of the MicroFlame website (NASA Space Apps, 'Flame in Freefall' challenge). "
     "Topic: fire and combustion in microgravity, spacecraft fire safety, materials flammability, "
     "NASA experiments (Saffire, BASS, FLEX, ACME and others) and the FireGap dataset.\n"
     "Rules:\n"
