@@ -43,4 +43,4 @@ Open http://127.0.0.1:8001/. Without a Groq key the site still works; the chat r
 .\.venv\Scripts\python.exe -m unittest e2e.test_site       # browser checks + docs/screenshots/*.png
 ```
 
-API details: [backend/FRONTEND_API.md](backend/FRONTEND_API.md).
+API details: interactive docs at http://127.0.0.1:8001/docs while the server runs.
