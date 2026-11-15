@@ -601,7 +601,7 @@ function flameOut(){
 const matSoot=()=>mat?mat.soot:.45;
 // Shared state for the 3D scene (js/cabin3d.js reads it every frame).
 window.flameState=()=>{const e=envObj(),m=target||readSliders();
-  return {env,g:e?e.g_ms2:0,gEarth:9.80665,flow:m.flow,soot:matSoot(),out:flameOut(),solid:m.solid,thick:m.th}};
+  return {env,g:e?e.g_ms2:0,gEarth:9.80665,flow:m.flow,o2:m.o2,kpa:m.kpa,soot:matSoot(),out:flameOut(),solid:m.solid,thick:m.th}};
 
 async function loadKnowledge(){
   // gravity per environment (environments.json) drives the 3D scene

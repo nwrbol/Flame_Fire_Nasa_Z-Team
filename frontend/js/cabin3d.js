@@ -97,7 +97,7 @@ const NOISE = `float hash(vec3 p){ p=fract(p*0.3183099+.1); p*=17.0; return frac
 function flameMaterial() {
   return new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uG: { value: 0 }, uFlow: { value: 0 }, uAlive: { value: 1 }, uSoot: { value: .5 } },
+    uniforms: { uTime: { value: 0 }, uG: { value: 0 }, uFlow: { value: 0 }, uAlive: { value: 1 }, uSoot: { value: .5 }, uHeat: { value: .3 } },
     vertexShader: NOISE + `
       #include <common>
       #include <logdepthbuf_pars_vertex>
@@ -117,16 +117,22 @@ function flameMaterial() {
       }`,
     fragmentShader: `
       #include <logdepthbuf_pars_fragment>
-      uniform float uG, uAlive, uSoot; varying float vH; varying vec3 vN; varying vec3 vV;
+      uniform float uG, uAlive, uSoot, uHeat; varying float vH; varying vec3 vN; varying vec3 vV;
       void main(){
         #include <logdepthbuf_fragment>
         float facing = clamp(abs(dot(vN, vV)), 0.0, 1.0), rim = pow(1.0 - facing, 1.7);
-        vec3 dome = vec3(0.32, 0.42, 1.7) * (0.25 + 1.7 * rim) + vec3(2.0, 0.9, 0.55) * uSoot * pow(facing, 2.0) * 0.9;
-        float aDome = 0.16 + 0.6 * rim + 0.25 * uSoot * facing;
+        // uSoot (material): methanol = clean blue dome, wax/heptane/ethylene = orange sooty core
+        vec3 dome = vec3(0.32, 0.42, 1.7) * (0.25 + 1.7 * rim) * (1.0 - 0.45 * uSoot)
+                  + vec3(2.3, 1.0, 0.32) * uSoot * pow(facing, 1.4) * 1.5;
+        float aDome = 0.16 + 0.6 * rim + 0.45 * uSoot * facing;
         vec3 tall = mix(vec3(0.3, 0.5, 1.8), mix(vec3(2.6, 1.9, 0.9), vec3(1.9, 0.7, 0.18), smoothstep(0.55, 0.95, vH)), smoothstep(0.03, 0.25, vH));
         tall = mix(vec3(0.35, 0.5, 1.6), tall, clamp(0.25 + uSoot, 0.0, 1.0));
         float aTall = pow(facing, 1.2) * (1.0 - smoothstep(0.8, 1.0, vH)) * (0.55 + 0.45 * smoothstep(0.0, 0.2, vH));
         float k = smoothstep(0.0, 0.85, uG); vec3 col = mix(dome, tall, k); float a = mix(aDome, aTall, k) * uAlive;
+        // uHeat (oxygen): lean air = dim flame, O2-rich air = bright, whiter flame
+        // (kept moderate: additive blending saturates to white and would hide the material colour)
+        col = mix(col, vec3(dot(col, vec3(0.33))) * vec3(1.1, 1.0, 0.9), 0.15 * uHeat) * (0.55 + 0.6 * uHeat);
+        a = min(1.0, a * (0.75 + 0.35 * uHeat));
         gl_FragColor = vec4(col * a, a);
       }`,
   });
@@ -616,7 +622,7 @@ export async function initCabin(host, getState) {
     const dtReal = Math.min(.25, clock.getDelta());
     const s = getState ? getState() : { env: 'space', g: 0, gEarth: 9.80665, flow: 10, soot: .5, out: false };
     if (s.env !== env || s.g !== g) setEnvironment(s);
-    const key = `${s.flow}|${s.soot}|${s.out}`; if (key !== frame.key) { frame.key = key; dirty = true; }
+    const key = `${s.flow}|${s.soot}|${s.out}|${s.o2}|${s.kpa}|${s.thick}`; if (key !== frame.key) { frame.key = key; dirty = true; }
     if (!visible || (reduce && !dirty)) return;
     perf.begin();
     fpsFrames++; const now = performance.now(); if (now - fpsT0 > 1000) { fps = fpsFrames * 1000 / (now - fpsT0); fpsFrames = 0; fpsT0 = now; }
@@ -645,14 +651,24 @@ export async function initCabin(host, getState) {
     } else renderer.toneMappingExposure = 1;
     stubMat.uniforms.uFade.value = renderer.toneMappingExposure; stubMat.uniforms.uTime.value = t;
 
-    // flame (decor items never burn): shape from g/g_Earth and the airflow only
+    // flame (decor items never burn). Qualitative illustration, not a model:
+    // shape from g/g_Earth and airflow; size and brightness grow with O2; lower pressure gives a
+    // larger, dimmer flame and higher pressure a sootier one; colour from the material's soot level.
     alive += ((s.out ? 0 : 1) - alive) * (reduce ? 1 : Math.min(1, dtReal * 2.5));
     if (s.out && !wasOut) vapor = 2.5; wasOut = s.out;
-    const R = .045 + .03 * gr; flame.scale.set(R, R, R * .8);
-    const u = flameMat.uniforms; u.uTime.value = t; u.uG.value = gr; u.uFlow.value = Math.min(1, s.flow / 30); u.uAlive.value = alive; u.uSoot.value = Math.min(1, s.soot);
+    const o2 = s.o2 ?? 21, kpa = Math.max(20, s.kpa ?? 101);
+    const heat = Math.min(1, Math.max(0, (o2 - 12) / 28));                       // 12 % dim … 40 % hot
+    const oxy = Math.min(1.7, Math.max(.55, Math.pow(o2 / 21, 1.1)));           // size factor from O2
+    const pres = Math.min(1.5, Math.max(.75, Math.pow(101 / kpa, .25)));        // low pressure: bigger
+    const sootE = Math.min(1, (s.soot ?? .45) * (.6 + .4 * Math.min(2, kpa / 101)) * (.75 + .5 * heat));
+    // solid samples only: a thin sheet burns more vigorously than a thick slab (0.05 mm … 20 mm)
+    const thin = s.solid && s.thick > 0 ? Math.min(1.35, Math.max(.7, Math.pow(.5 / s.thick, .12))) : 1;
+    const R = (.045 + .03 * gr) * oxy * pres * thin; flame.scale.set(R, R, R * .8);
+    const u = flameMat.uniforms; u.uTime.value = t; u.uG.value = gr; u.uFlow.value = Math.min(1, s.flow / 30); u.uAlive.value = alive;
+    u.uSoot.value = sootE; u.uHeat.value = heat;
     flame.visible = alive > .01;
-    fireLight.color.set('#7f9dff').lerp(new THREE.Color('#ffb46a'), Math.min(1, gr * 1.3 + s.soot * .3));
-    fireLight.intensity = alive * (.35 + .9 * gr);
+    fireLight.color.set('#7f9dff').lerp(new THREE.Color('#ffb46a'), Math.min(1, gr * 1.3 + sootE * .8));
+    fireLight.intensity = alive * (.35 + .9 * gr) * (.55 + .8 * heat) * thin;
     fireLight.position.copy(SAMPLE).add(new THREE.Vector3(Math.min(1, s.flow / 30) * R * .8, R * (.6 + 1.6 * gr), 0));
     arrows.forEach(a => { a.visible = s.flow > 0; const span = 1.1; a.position.set(-.95 + ((a.userData.phase * span + t * flowMS * 2) % span), a.userData.y, a.userData.z); a.setLength(.08 + .5 * Math.min(1, s.flow / 30), .06, .04); });
 
@@ -662,7 +678,7 @@ export async function initCabin(host, getState) {
       if (g > 0 && dropper > 4) { dropper = 0; for (let n = 0; n < 14; n++) dust.add({ p: new THREE.Vector3(SHELF_X - .6 + rand() * 1.2, SHELF_Y[2] + .05, SHELF_Z + .19), v: new THREE.Vector3((rand() - .5) * .03, 0, .03 + rand() * .04), life: 0, max: 6, size: .012, c: dustC }); }
       if (rand() < dt * 3) dust.add({ p: new THREE.Vector3((rand() - .5) * (W - .4), .4 + rand() * (H - .7), (rand() - .5) * (D - .4)), v: new THREE.Vector3((rand() - .5) * .01, 0, (rand() - .5) * .01), life: 0, max: 8, size: .008, c: dustC });
       const tip = SAMPLE.clone().add(new THREE.Vector3(Math.min(1, s.flow / 30) * R, R * (.7 + 2.6 * gr), 0));
-      if (alive > .3 && rand() < dt * (8 + 30 * s.soot)) {
+      if (alive > .3 && rand() < dt * (8 + 30 * sootE) * oxy) {
         const dir = new THREE.Vector3().randomDirection(); if (g > 0) dir.y = Math.abs(dir.y);
         smoke.add({ p: tip.clone().addScaledVector(dir, R * .6), v: dir.multiplyScalar(.05), life: 0, max: g > 0 ? 6 : 8, size: .02, c: sootC, kind: 'soot' });
       }
