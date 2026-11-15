@@ -3,7 +3,7 @@
 // Physics (cannon-es): gravity is the vector (0, -g, 0) with g = g_ms2 from environments.json,
 // stepped at a fixed 1/120 s. No animation curves, no 9.8 constant, no fall multipliers.
 // Changing the environment re-applies g, wakes every body and re-places the items so they
-// fall (or float off) again. Open space: g = 0, strapped items stay put, loose ones drift.
+// fall (or float off) again. Open space: g = 0, every item floats and drifts.
 //
 // Smoke, dust and the flame shape use the same g: hot smoke buoyancy a = g·(T/Ta − 1),
 // grains fall with g, the flame's vertical stretch follows g/g_Earth. The scene computes
@@ -419,45 +419,26 @@ export async function initCabin(host, getState) {
 
   // ---------- items ----------
   const items = [];
-  // strapped: held by straps / velcro in a crewed cabin; in open space they stay put
-  // strapped: false, true (straps around the whole item) or [cx, cy, cz, sx, sy, sz] — the part to strap
-  const add = (name, built, home, ry = 0, strapped = false) => {
+  const add = (name, built, home, ry = 0) => {
     const body = new CANNON.Body({ mass: built.mass, material: new CANNON.Material({ friction: built.friction, restitution: built.restitution }),
       linearDamping: .01, angularDamping: .05, sleepSpeedLimit: .04, sleepTimeLimit: .6 });
     for (const [shape, off, q] of built.shapes) body.addShape(shape, off, q);
     world.addBody(body); scene.add(built.group);
-    const strap = strapped ? strapFor(built, Array.isArray(strapped) ? strapped : null) : null; if (strap) { built.group.add(strap); strap.visible = false; }
-    const it = { name, group: built.group, body, mass: built.mass, bottom: built.bottom, home: new THREE.Vector3(home[0], home[1] + built.bottom, home[2]), ry, strapped, strap };
+    const it = { name, group: built.group, body, mass: built.mass, bottom: built.bottom, home: new THREE.Vector3(home[0], home[1] + built.bottom, home[2]), ry };
     items.push(it); return it;
   };
-  // Two cargo straps: each a thin 25 mm band LOOPING around the part (four narrow sides, hollow
-  // inside) — not a solid slab, which rendered as two big parallel panels on large items.
-  function strapFor(built, part) {
-    let c, size;
-    if (part) { c = new THREE.Vector3(part[0], part[1], part[2]); size = new THREE.Vector3(part[3], part[4], part[5]); }
-    else { const bb = new THREE.Box3().setFromObject(built.group); size = bb.getSize(new THREE.Vector3()); c = bb.getCenter(new THREE.Vector3()); }
-    const g = new THREE.Group(), m = std('#2a2f37', { r: .9 }), t = .004, w = .025;
-    const band = (z) => {
-      const sx = size.x + 2 * t, sy = size.y + 2 * t;
-      [[sx, t, c.x, c.y + size.y / 2 + t / 2], [sx, t, c.x, c.y - size.y / 2 - t / 2],
-       [t, sy, c.x - size.x / 2 - t / 2, c.y], [t, sy, c.x + size.x / 2 + t / 2, c.y]].forEach(([bx, by, x, y]) => {
-        const s = new THREE.Mesh(new THREE.BoxGeometry(bx, by, w), m); s.position.set(x, y, z); g.add(s); });
-    };
-    [-.28, .28].forEach(f => band(c.z + f * size.z));
-    return g;
-  }
   add('book (hardcover)', book(.24, .04, .17, '#7a2e2e', 'FLAMMABILITY'), [SHELF_X - .45, SHELF_Y[0] + .015, SHELF_Z]);
   add('book (paperback)', book(.21, .025, .15, '#2e4d7a', 'FIELD NOTES'), [SHELF_X - .43, SHELF_Y[0] + .055, SHELF_Z + .01], .2);
   add('book (thin manual)', book(.28, .012, .21, '#3f6b47', 'CHECKLIST'), [SHELF_X + .2, SHELF_Y[2] + .015, SHELF_Z]);
   add('water bottle', bottle(), [SHELF_X, SHELF_Y[0] + .015, SHELF_Z]);
-  add('first aid kit', firstAid(), [SHELF_X - .3, SHELF_Y[1] + .015, SHELF_Z], 0, true);
+  add('first aid kit', firstAid(), [SHELF_X - .3, SHELF_Y[1] + .015, SHELF_Z]);
   add('cable', cable(), [SHELF_X + .4, SHELF_Y[1] + .015, SHELF_Z]);
-  add('laptop', laptop(), [-.38, TOP, .2], .1, [0, 0, 0, .32, .016, .22]);          // velcro strap over the base
+  add('laptop', laptop(), [-.38, TOP, .2], .1);
   add('tablet', tablet(), [.42, TOP, .4], -.3);
   add('mug', mug(), [.5, TOP, -.12]);
-  add('document box', docBox(), [SHELF_X + .45, 0, SHELF_Z + .02], 0, true);
-  add('toolbox', toolbox(), [1.55, 0, .55], -.4, true);
-  add('chair', chair(), [-1.1, 0, .2], -Math.PI / 2, [0, .47, 0, .46, .07, .45]);   // seat strapped down
+  add('document box', docBox(), [SHELF_X + .45, 0, SHELF_Z + .02]);
+  add('toolbox', toolbox(), [1.55, 0, .55], -.4);
+  add('chair', chair(), [-1.1, 0, .2], -Math.PI / 2);
   const dropBook = add('drop-test book', book(.22, .03, .16, '#e2672a', 'DROP TEST'), [DROP.x, -10, DROP.z]);
   dropBook.excluded = true; dropBook.group.visible = false; world.removeBody(dropBook.body);
 
@@ -506,19 +487,18 @@ export async function initCabin(host, getState) {
     world.allowSleep = !zeroG;
     for (const it of items) {
       if (it.excluded) continue;
-      const b = it.body, held = zeroG && it.strapped;
-      b.type = held ? CANNON.Body.KINEMATIC : CANNON.Body.DYNAMIC; b.mass = held ? 0 : it.mass; b.updateMassProperties();
-      const lift = zeroG ? (held ? 0 : .06 + rand() * .2) : .05 + rand() * .2;   // released a little above the surface
-      b.position.set(it.home.x, it.home.y + (held ? 0 : lift), it.home.z);
-      b.quaternion.setFromEuler(held ? 0 : (rand() - .5) * .25, it.ry, held ? 0 : (rand() - .5) * .25);
+      const b = it.body;
+      b.type = CANNON.Body.DYNAMIC; b.mass = it.mass; b.updateMassProperties();
+      const lift = zeroG ? .06 + rand() * .2 : .05 + rand() * .2;   // released a little above the surface
+      b.position.set(it.home.x, it.home.y + lift, it.home.z);
+      b.quaternion.setFromEuler((rand() - .5) * .25, it.ry, (rand() - .5) * .25);
       b.velocity.set(0, 0, 0); b.angularVelocity.set(0, 0, 0);
-      if (zeroG && !held) {   // very small random drift and spin; soft bounces off the walls
+      if (zeroG) {   // every item floats: very small random drift and spin; soft bounces off the walls
         const d = new THREE.Vector3().randomDirection().multiplyScalar(.006 + rand() * .014);
         b.velocity.set(d.x, d.y, d.z); b.angularVelocity.set((rand() - .5) * .2, (rand() - .5) * .2, (rand() - .5) * .2);
       }
       b.previousPosition.copy(b.position); b.interpolatedPosition.copy(b.position);
       b.wakeUp();
-      if (it.strap) it.strap.visible = zeroG;
     }
   }
   function setEnvironment(s) {

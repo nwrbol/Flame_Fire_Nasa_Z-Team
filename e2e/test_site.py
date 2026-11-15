@@ -88,21 +88,20 @@ class SiteTests(unittest.TestCase):
         self.assertNotIn('Drop test', self.page.inner_text('body'))
         self.assertNotIn('What NASA knows', self.page.content())
 
-    def test_2_space_straps_are_thin_loops(self):
-        # straps on strapped items: thin 25 mm bands, never solid panels (old bug: two large parallel slabs)
-        self.set_env('space'); self.page.wait_for_timeout(300)
-        r = self.page.evaluate('''window.cabin3d.items.filter(i => i.strap).map(i => ({ name: i.name, visible: i.strap.visible,
-            parts: i.strap.children.map(m => { const p = m.geometry.parameters; return [p.width, p.height, p.depth].sort((a, b) => a - b); }) }))''')
-        self.assertEqual({x['name'] for x in r}, {'first aid kit', 'laptop', 'document box', 'toolbox', 'chair'})
+    def test_2_everything_floats_in_open_space(self):
+        # no straps: in 0 g every item is a dynamic body released above its place and drifting
+        self.set_env('space'); self.page.wait_for_timeout(1500)
+        r = self.page.evaluate("""window.cabin3d.items.filter(i => !i.excluded).map(i => ({ name: i.name, strap: 'strap' in i,
+            type: i.body.type, y: i.body.position.y, rest: i.home.y }))""")
+        self.assertEqual(len(r), 12)
         for item in r:
             with self.subTest(item=item['name']):
-                self.assertTrue(item['visible'])
-                self.assertEqual(len(item['parts']), 8)                    # two loops of four sides
-                for dims in item['parts']:
-                    self.assertLessEqual(dims[0], .005)                    # 4 mm thick band
-                    self.assertLessEqual(dims[1], .026)                    # 25 mm wide band
-        self.set_env('earth'); self.page.wait_for_timeout(300)
-        self.assertFalse(any(self.page.evaluate('window.cabin3d.items.filter(i => i.strap).map(i => i.strap.visible)')))
+                self.assertFalse(item['strap'])
+                self.assertEqual(item['type'], 1)                          # CANNON.Body.DYNAMIC
+                self.assertGreater(item['y'], item['rest'] + .02)          # lifted off its surface
+        self.set_env('earth'); self.page.wait_for_timeout(2500)
+        settled = self.page.evaluate("window.cabin3d.items.filter(i => !i.excluded).map(i => i.body.position.y - i.home.y)")
+        self.assertTrue(all(abs(d) < .05 for d in settled), settled)   # back on their surfaces with g
 
     def test_4_no_network_requests(self):
         external = [u for u in self.requests if not u.startswith(self.base) and not u.startswith('data:')]
