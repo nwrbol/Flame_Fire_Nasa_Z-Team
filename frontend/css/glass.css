@@ -1,0 +1,195 @@
+/* ==========================================================================
+   Liquid Glass buttons (iOS 26 / macOS Tahoe style)
+   One component, .glass-btn, with modifiers. The site's existing button classes are mapped onto
+   the same rules by grouped selectors below, so no button markup or logic changes.
+   Modifiers:  .glass-btn--primary  tinted (call to action, selected state)
+               .glass-btn--small    compact pill        .glass-btn--round  circular icon button
+               .glass-btn--rect     rounded rectangle    .glass-btn--on-dark  on dark photos / 3D views
+   ========================================================================== */
+
+:root {
+  --glass-tint: 255, 255, 255;          /* RGB of the glass */
+  --glass-alpha: .16;                   /* 0.12–0.2 */
+  --glass-blur: 16px;
+  --glass-saturate: 180%;
+  --glass-border: rgba(255, 255, 255, .35);
+  --glass-edge: rgba(255, 255, 255, .85);     /* brighter top rim: light caught on the glass edge */
+  --glass-inner-hi: rgba(255, 255, 255, .6);  /* inset light, top-left */
+  --glass-inner-lo: rgba(0, 0, 0, .1);        /* inset dark, bottom-right */
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, .15), 0 0 0 .5px rgba(0, 0, 0, .06);
+  --glass-text: #141414;
+  --glass-text-shadow: 0 1px 0 rgba(255, 255, 255, .45);
+  --glass-glint: .5;                    /* strength of the moving highlight */
+  --glass-sheen: .5;                    /* fixed diagonal highlight */
+  --glass-ring: #2a52d6;                /* focus ring */
+  --glass-fallback: rgba(255, 255, 255, .78);  /* no backdrop-filter: denser, readable */
+  --glass-radius: 999px;
+  /* primary: deep blue, white text >= 4.5:1 even over a white page */
+  --glass-primary-tint: 34, 66, 188;
+  --glass-primary-alpha: .9;
+  --glass-primary-text: #fff;
+  --glass-primary-fallback: rgb(34, 66, 188);
+  --glass-ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+}
+
+/* dark theme: darker glass, thinner/fainter rim (system setting, or the site's theme switch) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --glass-alpha: .08; --glass-border: rgba(255, 255, 255, .16); --glass-edge: rgba(255, 255, 255, .38);
+    --glass-inner-hi: rgba(255, 255, 255, .2); --glass-inner-lo: rgba(0, 0, 0, .4);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, .38); --glass-text: #f0efe9; --glass-text-shadow: 0 1px 1px rgba(0, 0, 0, .45);
+    --glass-glint: .28; --glass-ring: #9db7ff; --glass-fallback: rgba(30, 30, 32, .86);
+  }
+}
+:root[data-theme="dark"] {
+  --glass-alpha: .08; --glass-border: rgba(255, 255, 255, .16); --glass-edge: rgba(255, 255, 255, .38);
+  --glass-inner-hi: rgba(255, 255, 255, .2); --glass-inner-lo: rgba(0, 0, 0, .4);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, .38); --glass-text: #f0efe9; --glass-text-shadow: 0 1px 1px rgba(0, 0, 0, .45);
+  --glass-glint: .28; --glass-ring: #9db7ff; --glass-fallback: rgba(30, 30, 32, .86);
+}
+/* always-dark surfaces (the 3D view): glass for a dark backdrop regardless of the page theme */
+.glass-btn--on-dark, .viz {
+  --glass-tint: 14, 18, 28; --glass-alpha: .5; --glass-sheen: .18; --glass-border: rgba(255, 255, 255, .28); --glass-edge: rgba(255, 255, 255, .6);
+  --glass-inner-hi: rgba(255, 255, 255, .3); --glass-inner-lo: rgba(0, 0, 0, .35);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, .35); --glass-text: #f4f6fb; --glass-text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
+  --glass-glint: .35; --glass-ring: #9db7ff; --glass-fallback: rgba(24, 26, 32, .82);
+}
+
+/* a soft coloured backdrop so the glass has something to refract (on plain white it is invisible) */
+body {
+  background-image:
+    radial-gradient(1100px 620px at 8% -8%, rgba(59, 108, 255, .13), transparent 62%),
+    radial-gradient(900px 560px at 102% 18%, rgba(240, 80, 42, .10), transparent 60%),
+    radial-gradient(800px 600px at 40% 110%, rgba(31, 157, 85, .07), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* ---------- the component (and the site's buttons mapped onto it) ---------- */
+.glass-btn,
+.btn, .chip, .fab, .theme-btn, .send, .ico, .pager button, .drawer .x,
+.sugg button, .nearest button, .msg.err button,
+.seg button[aria-pressed="true"], .cam-seg button[aria-pressed="true"] {
+  --glass-fill: linear-gradient(180deg, rgba(var(--glass-tint), calc(var(--glass-alpha) + .1)), rgba(var(--glass-tint), var(--glass-alpha)));
+  border-radius: var(--glass-radius);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-edge);
+  box-shadow:
+    inset 1px 1px 1px var(--glass-inner-hi),     /* light top-left */
+    inset -1px -1px 1px var(--glass-inner-lo),   /* dark bottom-right */
+    inset 0 0 12px rgba(255, 255, 255, .08),     /* body of the "drop" */
+    var(--glass-shadow);
+  color: var(--glass-text);
+  text-shadow: var(--glass-text-shadow);
+  text-decoration: none;
+  overflow: hidden;
+  isolation: isolate;
+  cursor: pointer;
+  transition: all .3s ease, transform .35s var(--glass-ease-spring);
+  -webkit-tap-highlight-color: transparent;
+}
+/* everything except fixed-position buttons becomes the containing block for the glint */
+.glass-btn, .btn, .chip, .theme-btn, .send, .ico, .pager button, .drawer .x,
+.sugg button, .nearest button, .msg.err button,
+.seg button[aria-pressed="true"], .cam-seg button[aria-pressed="true"] { position: relative; }
+
+/* diagonal glint that follows the pointer (--mx/--my are set by js/glass.js) */
+.glass-btn::before,
+.btn::before, .chip::before, .fab::before, .theme-btn::before, .send::before, .ico::before, .pager button::before, .drawer .x::before,
+.sugg button::before, .nearest button::before, .msg.err button::before,
+.seg button[aria-pressed="true"]::before, .cam-seg button[aria-pressed="true"]::before {
+  content: "";
+  position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background:
+    radial-gradient(140px circle at var(--mx, 25%) var(--my, 0%), rgba(255, 255, 255, var(--glass-glint)), transparent 60%),
+    linear-gradient(135deg, rgba(255, 255, 255, var(--glass-sheen)), rgba(255, 255, 255, 0) 42%);
+  opacity: .55;
+  transition: opacity .3s ease;
+}
+
+/* hover: grow slightly, stronger glint, brighter rim */
+.glass-btn:hover:not(:disabled),
+.btn:hover, .chip:hover, .fab:hover, .theme-btn:hover, .send:hover:not(:disabled), .ico:hover, .pager button:hover:not(:disabled), .drawer .x:hover,
+.sugg button:hover, .nearest button:hover, .msg.err button:hover {
+  transform: scale(1.04);
+  border-color: rgba(255, 255, 255, .6);
+  border-top-color: rgba(255, 255, 255, .95);
+}
+.glass-btn:hover::before,
+.btn:hover::before, .chip:hover::before, .fab:hover::before, .theme-btn:hover::before, .send:hover::before, .ico:hover::before,
+.pager button:hover::before, .drawer .x:hover::before, .sugg button:hover::before, .nearest button:hover::before, .msg.err button:hover::before { opacity: 1; }
+
+/* press: squeeze, then an elastic spring back (the transform transition uses the spring curve) */
+.glass-btn:active:not(:disabled),
+.btn:active, .chip:active, .fab:active, .theme-btn:active, .send:active:not(:disabled), .ico:active, .pager button:active:not(:disabled), .drawer .x:active,
+.sugg button:active, .nearest button:active, .msg.err button:active,
+.seg button:active, .cam-seg button:active {
+  transform: scale(.96);
+  transition: all .3s ease, transform .12s ease-out;
+}
+
+/* ---------- modifiers ---------- */
+.glass-btn--primary,
+.btn.primary, .fab, .send, .chip[aria-pressed="true"],
+.seg button[aria-pressed="true"], .cam-seg button[aria-pressed="true"] {
+  --glass-tint: var(--glass-primary-tint);
+  --glass-alpha: var(--glass-primary-alpha);
+  --glass-border: rgba(255, 255, 255, .35);
+  --glass-glint: .16;
+  --glass-sheen: .2;
+  color: var(--glass-primary-text);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .35);
+  --glass-fill: linear-gradient(180deg, rgba(var(--glass-tint), calc(var(--glass-alpha) - .04)), rgba(var(--glass-tint), calc(var(--glass-alpha) + .08)));
+  background: var(--glass-fill);
+}
+/* the page's own hover/disabled rules paint solid fills: keep the glass instead */
+.btn.primary:hover, .fab:hover, .send:hover:not(:disabled), .send:disabled, .ico:hover, .chip[aria-pressed="true"]:hover {
+  background: var(--glass-fill); color: var(--glass-primary-text);
+}
+.ico:hover { color: var(--glass-text); }
+.glass-btn--small { padding: 6px 13px; font-size: 13px; }
+.glass-btn--round { width: 40px; height: 40px; padding: 0; display: inline-grid; place-items: center; }
+.glass-btn--rect,
+.sugg button { --glass-radius: 18px; }
+.glass-btn--on-dark, .nearest button { text-decoration: none; padding: 5px 12px; }
+
+/* segmented controls: one glass tray, the pressed segment is a tinted glass pill */
+.seg, .cam-seg {
+  background: linear-gradient(180deg, rgba(var(--glass-tint), calc(var(--glass-alpha) + .06)), rgba(var(--glass-tint), var(--glass-alpha)));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border); border-top-color: var(--glass-edge);
+  box-shadow: inset 1px 1px 1px var(--glass-inner-hi), inset -1px -1px 1px var(--glass-inner-lo), var(--glass-shadow);
+}
+.seg button, .cam-seg button { color: var(--glass-text); text-shadow: var(--glass-text-shadow); transition: all .3s ease, transform .35s var(--glass-ease-spring); }
+.seg button[aria-pressed="true"], .cam-seg button[aria-pressed="true"] { color: var(--glass-primary-text); text-shadow: 0 1px 1px rgba(0, 0, 0, .35); }
+
+/* disabled stays readable but flat */
+.send:disabled, .pager button:disabled, .glass-btn:disabled { opacity: .45; cursor: default; transform: none; }
+
+/* ---------- accessibility ---------- */
+.glass-btn:focus-visible,
+.btn:focus-visible, .chip:focus-visible, .fab:focus-visible, .theme-btn:focus-visible, .send:focus-visible, .ico:focus-visible,
+.pager button:focus-visible, .drawer .x:focus-visible, .sugg button:focus-visible, .nearest button:focus-visible, .msg.err button:focus-visible,
+.seg button:focus-visible, .cam-seg button:focus-visible {
+  outline: 2px solid var(--glass-ring);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass-btn, .btn, .chip, .fab, .theme-btn, .send, .ico, .pager button, .drawer .x, .sugg button, .nearest button, .msg.err button,
+  .seg button, .cam-seg button { transition: none !important; transform: none !important; }
+  .glass-btn::before, .btn::before, .chip::before, .fab::before, .theme-btn::before, .send::before, .ico::before, .pager button::before,
+  .drawer .x::before, .sugg button::before, .nearest button::before, .msg.err button::before { transition: none !important; }
+}
+
+/* ---------- browsers without backdrop-filter: a denser, readable fill ---------- */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass-btn, .btn, .chip, .theme-btn, .ico, .pager button, .drawer .x, .sugg button, .nearest button, .msg.err button, .seg, .cam-seg {
+    background: var(--glass-fallback);
+  }
+  .glass-btn--primary, .btn.primary, .fab, .send, .chip[aria-pressed="true"], .seg button[aria-pressed="true"], .cam-seg button[aria-pressed="true"] {
+    background: var(--glass-primary-fallback);
+  }
+}

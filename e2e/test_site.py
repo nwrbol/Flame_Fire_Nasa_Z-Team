@@ -99,9 +99,13 @@ class SiteTests(unittest.TestCase):
                 self.assertFalse(item['strap'])
                 self.assertEqual(item['type'], 1)                          # CANNON.Body.DYNAMIC
                 self.assertGreater(item['y'], item['rest'] + .02)          # lifted off its surface
-        self.set_env('earth'); self.page.wait_for_timeout(2500)
-        settled = self.page.evaluate("window.cabin3d.items.filter(i => !i.excluded).map(i => i.body.position.y - i.home.y)")
-        self.assertTrue(all(abs(d) < .05 for d in settled), settled)   # back on their surfaces with g
+        self.set_env('earth'); self.page.wait_for_timeout(3000)
+        # with g everything comes to rest on its surface (a tall bottle may tip over: up to 0.1 m lower)
+        st = self.page.evaluate("window.cabin3d.items.filter(i => !i.excluded).map(i => ({ n: i.name, dy: i.body.position.y - i.home.y, v: i.body.velocity.length() }))")
+        for item in st:
+            with self.subTest(item=item['n']):
+                self.assertLess(item['v'], .05)                         # settled (below the engine's sleep speed, 0.04 m/s)
+                self.assertTrue(-.1 < item['dy'] < .05, item)           # on its shelf / bench / floor
 
     def test_4_no_network_requests(self):
         external = [u for u in self.requests if not u.startswith(self.base) and not u.startswith('data:')]

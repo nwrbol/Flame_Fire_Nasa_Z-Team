@@ -11,6 +11,8 @@
 import * as THREE from 'three';
 import * as CANNON from '/vendor/cannon-es.js';
 import { OrbitControls } from '/vendor/OrbitControls.js';
+import { createWorld, FAR, SUN_DIR } from '/js/world3d.js';
+import { createPerf } from '/js/perf.js';
 
 export const STEP = 1 / 120;
 const W = 4.2, H = 2.4, D = 3.2;                 // cabin (m); the +Z wall is cut away towards the camera
@@ -70,71 +72,12 @@ const screenTex = (tint) => canvasTex(256, 160, (g) => {
   for (let i = 0; i < 6; i++) g.fillRect(18, 20 + i * 20, 120 + (i % 3) * 30, 6);
 });
 
-// ---------- window views (procedural, no external images) ----------
-function stars(g, w, h, n, r, maxY = h) { for (let i = 0; i < n; i++) { const a = r(); g.fillStyle = `rgba(255,255,255,${.35 + a * .65})`; const s = a > .97 ? 2.2 : a > .85 ? 1.5 : 1; g.fillRect(r() * w, r() * maxY, s, s); } }
-function viewEarth(g, w, h) {
-  const r = rng(11), hz = h * .56;
-  const sky = g.createLinearGradient(0, 0, 0, hz); sky.addColorStop(0, '#3f78c9'); sky.addColorStop(.7, '#8fbbe8'); sky.addColorStop(1, '#d9e8f2');
-  g.fillStyle = sky; g.fillRect(0, 0, w, hz);
-  const sun = g.createRadialGradient(w * .45, h * .39, 2, w * .45, h * .39, w * .2); sun.addColorStop(0, 'rgba(255,253,235,1)'); sun.addColorStop(.08, 'rgba(255,248,215,.9)'); sun.addColorStop(1, 'rgba(255,248,215,0)');
-  g.fillStyle = sun; g.fillRect(0, 0, w, hz);
-  for (let i = 0; i < 26; i++) { const x = r() * w, y = h * (.08 + r() * .38), s = 20 + r() * 70; g.fillStyle = `rgba(255,255,255,${.35 + r() * .45})`; for (let k = 0; k < 6; k++) { g.beginPath(); g.ellipse(x + (r() - .5) * s * 1.6, y + (r() - .5) * s * .3, s * (.4 + r() * .6), s * (.18 + r() * .2), 0, 0, 7); g.fill(); } }
-  const ground = g.createLinearGradient(0, hz, 0, h); ground.addColorStop(0, '#8aa27a'); ground.addColorStop(.25, '#6f8a52'); ground.addColorStop(1, '#4d6435');
-  g.fillStyle = ground; g.fillRect(0, hz, w, h - hz);
-  g.fillStyle = 'rgba(160,185,200,.5)'; g.fillRect(0, hz - 3, w, 8);                         // horizon haze
-  for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(${80 + r() * 60},${100 + r() * 50},${50 + r() * 30},.45)`; const y = hz + 8 + r() * (h - hz); g.fillRect(r() * w, y, 30 + r() * 120, 3 + (y - hz) * .05); }
-}
-function crater(g, x, y, rad, light) {
-  const in_ = g.createRadialGradient(x - rad * .25, y - rad * .2, rad * .1, x, y, rad);
-  in_.addColorStop(0, `rgba(60,60,62,${.55})`); in_.addColorStop(.8, 'rgba(90,90,92,.25)'); in_.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = in_; g.beginPath(); g.ellipse(x, y, rad, rad * .38, 0, 0, 7); g.fill();
-  g.strokeStyle = `rgba(220,220,215,${light})`; g.lineWidth = Math.max(1, rad * .07); g.beginPath(); g.ellipse(x, y, rad, rad * .38, 0, Math.PI * .95, Math.PI * 1.95); g.stroke();
-}
-function viewMoon(g, w, h) {
-  const r = rng(7), hz = h * .56;
-  g.fillStyle = '#000'; g.fillRect(0, 0, w, hz); stars(g, w, h, 520, r, hz);
-  // small blue Earth (in the lunar sky the Earth is ~2° across)
-  const ex = w * .49, ey = h * .44, er = w * .02;
-  const e = g.createRadialGradient(ex - er * .3, ey - er * .3, er * .1, ex, ey, er); e.addColorStop(0, '#9fd0ff'); e.addColorStop(.6, '#2f6fd1'); e.addColorStop(1, '#173a78');
-  g.fillStyle = e; g.beginPath(); g.arc(ex, ey, er, 0, 7); g.fill();
-  g.fillStyle = 'rgba(255,255,255,.75)'; for (let i = 0; i < 5; i++) { g.beginPath(); g.ellipse(ex + (r() - .5) * er, ey + (r() - .5) * er, er * .35, er * .12, r() * 3, 0, 7); g.fill(); }
-  g.fillStyle = 'rgba(0,0,0,.55)'; g.beginPath(); g.arc(ex + er * .45, ey, er, -Math.PI / 2, Math.PI / 2); g.fill();   // night side
-  const ground = g.createLinearGradient(0, hz, 0, h); ground.addColorStop(0, '#8d8d8a'); ground.addColorStop(1, '#5d5d5b');
-  g.fillStyle = ground; g.fillRect(0, hz, w, h - hz);
-  for (let i = 0; i < 120; i++) { const y = hz + Math.pow(r(), 1.6) * (h - hz), s = 3 + (y - hz) * .09 * (.3 + r()); crater(g, r() * w, y, s, .25 + r() * .35); }
-  g.fillStyle = 'rgba(0,0,0,.25)'; for (let i = 0; i < 300; i++) g.fillRect(r() * w, hz + r() * (h - hz), 1.5, 1.5);
-}
-function viewMars(g, w, h) {
-  const r = rng(5), hz = h * .56;
-  const sky = g.createLinearGradient(0, 0, 0, hz); sky.addColorStop(0, '#b7845e'); sky.addColorStop(.75, '#d8a983'); sky.addColorStop(1, '#e6c3a0');
-  g.fillStyle = sky; g.fillRect(0, 0, w, hz);
-  // smaller, paler sun than from Earth (Mars is ~1.5 AU from the Sun)
-  const sun = g.createRadialGradient(w * .46, h * .41, 1, w * .46, h * .41, w * .07); sun.addColorStop(0, 'rgba(255,250,235,1)'); sun.addColorStop(.12, 'rgba(255,240,220,.85)'); sun.addColorStop(1, 'rgba(255,230,200,0)');
-  g.fillStyle = sun; g.fillRect(0, 0, w, hz);
-  const ground = g.createLinearGradient(0, hz, 0, h); ground.addColorStop(0, '#b4683a'); ground.addColorStop(1, '#7c3f20');
-  g.fillStyle = ground; g.fillRect(0, hz, w, h - hz);
-  g.fillStyle = 'rgba(150,90,60,.6)'; g.beginPath(); g.moveTo(0, hz); for (let x = 0; x <= w; x += 40) g.lineTo(x, hz - 6 - Math.sin(x * .013) * 10 - r() * 6); g.lineTo(w, hz); g.fill();
-  for (let i = 0; i < 140; i++) { const y = hz + Math.pow(r(), 1.5) * (h - hz), s = 2 + (y - hz) * .05 * (.4 + r()), x = r() * w;
-    g.fillStyle = 'rgba(55,28,16,.85)'; g.beginPath(); g.ellipse(x, y, s, s * .6, 0, 0, 7); g.fill();
-    g.fillStyle = 'rgba(220,150,110,.5)'; g.beginPath(); g.ellipse(x - s * .25, y - s * .2, s * .45, s * .22, 0, 0, 7); g.fill(); }
-}
-function viewOrbit(g, w, h) {
-  const r = rng(3);
-  g.fillStyle = '#000'; g.fillRect(0, 0, w, h); stars(g, w, h, 650, r);
-  const cx = w * .5, cy = h * 2.35, R = h * 1.95;          // Earth limb along the bottom
-  const earth = g.createRadialGradient(cx, cy - R * .9, R * .2, cx, cy, R); earth.addColorStop(0, '#2f7fd8'); earth.addColorStop(.85, '#1d4f9c'); earth.addColorStop(1, '#0e2d63');
-  g.save(); g.beginPath(); g.arc(cx, cy, R, 0, 7); g.clip(); g.fillStyle = earth; g.fillRect(0, 0, w, h);
-  for (let i = 0; i < 90; i++) { g.fillStyle = `rgba(255,255,255,${.25 + r() * .5})`; const a = -Math.PI / 2 + (r() - .5) * .9, d = R * (.82 + r() * .17); g.beginPath(); g.ellipse(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 10 + r() * 40, 3 + r() * 8, a + Math.PI / 2, 0, 7); g.fill(); }
-  g.restore();
-  // thin atmosphere along the limb
-  for (let k = 0; k < 3; k++) { g.strokeStyle = `rgba(120,180,255,${[.55, .25, .1][k]})`; g.lineWidth = [3, 8, 18][k]; g.beginPath(); g.arc(cx, cy, R + [2, 6, 12][k], Math.PI * 1.1, Math.PI * 1.9); g.stroke(); }
-}
-const VIEWS = { earth: ['View: Earth (ground reference)', viewEarth], moon: ['View: Moon', viewMoon], mars: ['View: Mars', viewMars], space: ['View from orbit (example)', viewOrbit] };
+const VIEWS = { earth: ['View: Earth (ground reference)'], moon: ['View: Moon'], mars: ['View: Mars'], space: ['View from orbit (example)'] };
 // Sunlight through the porthole: hard shadows on the Moon and in orbit (no atmosphere), soft on Earth.
 const LIGHT = {
-  earth: { sun: '#fff3df', sunI: 2.4, radius: 7, hemiSky: '#a9c6f2', hemiGround: '#6b5d4b', hemiI: .6 },
+  earth: { sun: '#fff3df', sunI: 2.4, radius: 7, hemiSky: '#a9c6f2', hemiGround: '#6b5d4b', hemiI: 1.15 },
   moon: { sun: '#ffffff', sunI: 3.4, radius: 1, hemiSky: '#20232a', hemiGround: '#2b2b2b', hemiI: .2 },
-  mars: { sun: '#ffe0c0', sunI: 1.8, radius: 3, hemiSky: '#d39a74', hemiGround: '#5a3a2a', hemiI: .38 },
+  mars: { sun: '#ffe0c0', sunI: 1.8, radius: 3, hemiSky: '#d39a74', hemiGround: '#5a3a2a', hemiI: .8 },
   space: { sun: '#ffffff', sunI: 3.6, radius: 1, hemiSky: '#20232a', hemiGround: '#28466e', hemiI: .22 },
 };
 
@@ -329,8 +272,11 @@ export async function initCabin(host, getState) {
   renderer.domElement.setAttribute('role', 'img');
   renderer.domElement.setAttribute('aria-label', 'Illustration: a cabin with a porthole and a burning fabric sample; drag to orbit, scroll to zoom');
   host.append(renderer.domElement);
-  const scene = new THREE.Scene(); scene.background = new THREE.Color('#06070a');
-  const camera = new THREE.PerspectiveCamera(46, 1, 0.01, 60);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(46, 1, 0.05, FAR);
+  // test mode (?testbg): magenta clear colour, so any pixel not covered by the world shows up
+  const TEST_BG = new URLSearchParams(location.search).has('testbg');
+  const outside = createWorld(scene, { small });
 
   // ---------- physics world ----------
   const world = new CANNON.World({ gravity: V(0, 0, 0) });
@@ -358,22 +304,36 @@ export async function initCabin(host, getState) {
   // porthole: wall tunnel, frame ring with bolts, glass with a soft highlight
   const frameMat = std('#5b616b', { m: .7, r: .35 });
   const tunnel = new THREE.Mesh(new THREE.CylinderGeometry(WIN.r, WIN.r, .14, 48, 1, true), new THREE.MeshStandardMaterial({ color: '#6c727c', metalness: .5, roughness: .5, side: THREE.BackSide }));
-  tunnel.rotation.x = Math.PI / 2; tunnel.position.set(WIN.x, WIN.y, -D / 2 - .07); tunnel.castShadow = true; scene.add(tunnel);
+  tunnel.rotation.x = Math.PI / 2; tunnel.position.set(WIN.x, WIN.y, -D / 2 - .065); tunnel.castShadow = true; scene.add(tunnel);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(WIN.r + .03, .035, 16, 64), frameMat); ring.position.set(WIN.x, WIN.y, -D / 2 + .012); ring.castShadow = true; scene.add(ring);
   for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, b = new THREE.Mesh(new THREE.CylinderGeometry(.009, .009, .014, 10), std('#c7ccd3', { m: .9, r: .25 }));
     b.rotation.x = Math.PI / 2; b.position.set(WIN.x + Math.cos(a) * (WIN.r + .03), WIN.y + Math.sin(a) * (WIN.r + .03), -D / 2 + .05); scene.add(b); }
+  // exterior hull, 0.12 m outside the inner walls (single-sided inner planes are invisible from
+  // outside, which used to show the void); the +Z side stays cut away towards the camera
+  const T = .12, hullTex = panelTexture('#d4d8de', '#a9afb8'); hullTex.wrapS = hullTex.wrapT = THREE.RepeatWrapping;
+  const hullMat = (rx, ry) => { const t = hullTex.clone(); t.repeat.set(rx, ry); t.needsUpdate = true; return new THREE.MeshStandardMaterial({ map: t, roughness: .6, metalness: .25 }); };
+  const skin = (geo, mat, x, y, z, rx, ry) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, 0); m.castShadow = m.receiveShadow = true; scene.add(m); return m; };
+  skin(new THREE.PlaneGeometry(W + 2 * T, D + T), hullMat(5, 4), 0, H + T, -T / 2, -Math.PI / 2, 0);      // roof
+  skin(new THREE.PlaneGeometry(W + 2 * T, D + T), hullMat(5, 4), 0, -T, -T / 2, Math.PI / 2, 0);          // belly
+  skin(new THREE.PlaneGeometry(D + T, H + 2 * T), hullMat(4, 3), -W / 2 - T, H / 2, -T / 2, 0, -Math.PI / 2);
+  skin(new THREE.PlaneGeometry(D + T, H + 2 * T), hullMat(4, 3), W / 2 + T, H / 2, -T / 2, 0, Math.PI / 2);
+  const outerBack = new THREE.Shape(); outerBack.moveTo(-W / 2 - T, -T); outerBack.lineTo(W / 2 + T, -T); outerBack.lineTo(W / 2 + T, H + T); outerBack.lineTo(-W / 2 - T, H + T); outerBack.lineTo(-W / 2 - T, -T);
+  const outerHole = new THREE.Path(); outerHole.absarc(-WIN.x, WIN.y, WIN.r, 0, Math.PI * 2, true); outerBack.holes.push(outerHole);   // mirrored: faces -Z
+  const backSkinTex = hullTex.clone(); backSkinTex.repeat.set(1 / .9, 1 / .9); backSkinTex.needsUpdate = true;
+  skin(new THREE.ShapeGeometry(outerBack, 48), new THREE.MeshStandardMaterial({ map: backSkinTex, roughness: .6, metalness: .25 }), 0, 0, -D / 2 - T, 0, Math.PI);
+  // section caps on the cut-away edge cover the wall thickness
+  const cap = new THREE.Shape(); cap.moveTo(-W / 2 - T, -T); cap.lineTo(W / 2 + T, -T); cap.lineTo(W / 2 + T, H + T); cap.lineTo(-W / 2 - T, H + T); cap.lineTo(-W / 2 - T, -T);
+  const capHole = new THREE.Path(); capHole.moveTo(-W / 2, 0); capHole.lineTo(-W / 2, H); capHole.lineTo(W / 2, H); capHole.lineTo(W / 2, 0); capHole.lineTo(-W / 2, 0); cap.holes.push(capHole);
+  skin(new THREE.ShapeGeometry(cap), std('#3a3f48', { r: .6, m: .3 }), 0, 0, D / 2 + .002, 0, 0);
+  const outerRing = new THREE.Mesh(new THREE.TorusGeometry(WIN.r + .03, .04, 16, 64), frameMat); outerRing.position.set(WIN.x, WIN.y, -D / 2 - T - .01); outerRing.castShadow = true; scene.add(outerRing);
   const glass = new THREE.Mesh(new THREE.CircleGeometry(WIN.r, 48), new THREE.MeshPhysicalMaterial({ color: '#cfe3ff', transparent: true, opacity: .1, roughness: .05, metalness: 0, clearcoat: 1, depthWrite: false }));
   glass.position.set(WIN.x, WIN.y, -D / 2 - .03); scene.add(glass);
   const glint = new THREE.Mesh(new THREE.CircleGeometry(WIN.r, 48), new THREE.MeshBasicMaterial({ map: canvasTex(256, 256, (g) => { const gr = g.createLinearGradient(40, 0, 220, 256); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(.42, 'rgba(255,255,255,.0)'); gr.addColorStop(.5, 'rgba(255,255,255,.22)'); gr.addColorStop(.56, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); }), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   glint.position.set(WIN.x, WIN.y, -D / 2 - .028); scene.add(glint);
-  // outside view: two backdrops for a smooth cross-fade, plus a caption under the porthole
-  const viewTex = {}; for (const [k, [, draw]] of Object.entries(VIEWS)) viewTex[k] = canvasTex(VIEW_W, Math.round(VIEW_W * .63), draw);
-  const backdrop = () => { const m = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 4.8), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, toneMapped: false })); m.position.set(WIN.x, WIN.y, -D / 2 - 2.6); scene.add(m); return m; };
-  const views = [backdrop(), backdrop()]; views[1].renderOrder = 1;
+  // caption under the porthole (the view itself is the real 3D world outside)
   const capTex = {}; for (const [k, [label]] of Object.entries(VIEWS)) capTex[k] = textTex([label], 'rgba(10,12,16,.82)', '#e9edf5', 512, 72, '600 30px system-ui');
   const caption = new THREE.Mesh(new THREE.PlaneGeometry(.62, .087), new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false }));
   caption.position.set(WIN.x, WIN.y - WIN.r - .11, -D / 2 + .006); scene.add(caption);
-  let viewFade = 1, viewFront = 0;
 
   // invisible colliders for the shell (front plane keeps floating items inside the cut-away)
   addStatic(new CANNON.Plane(), V(0, 0, 0), Q(-Math.PI / 2, 0, 0));
@@ -451,8 +411,8 @@ export async function initCabin(host, getState) {
   const cabinLight = new THREE.PointLight('#e8eef8', 2.4, 0, 2); cabinLight.position.set(.3, H - .15, .2); scene.add(cabinLight);
   const cabinLight2 = new THREE.PointLight('#e8eef8', 1.4, 0, 2); cabinLight2.position.set(1.3, H - .15, .9); scene.add(cabinLight2);
   const sun = new THREE.DirectionalLight('#ffffff', 3); sun.castShadow = !small;
-  sun.position.set(WIN.x - 1.0, WIN.y + 2.1, -D / 2 - 3.2); sun.target.position.set(WIN.x + .5, 0, .6); scene.add(sun, sun.target);
-  Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: .5, far: 12 }); sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -.0006; sun.shadow.normalBias = .02;
+  sun.target.position.set(0, 1.1, 0); sun.position.copy(sun.target.position).addScaledVector(SUN_DIR, 30); scene.add(sun, sun.target);
+  Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: 1, far: 70 }); sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -.0006; sun.shadow.normalBias = .02;
   const lightNow = { ...LIGHT.space }, sunC = new THREE.Color(), hs = new THREE.Color(), hg = new THREE.Color();
 
   const arrows = [];
@@ -471,17 +431,43 @@ export async function initCabin(host, getState) {
     drop: { pos: [.2, .62, 2.95], target: [DROP.x, .52, DROP.z] },
   };
   const setView = (k) => { const v = VIEWPOINTS[k] || VIEWPOINTS.overview; camera.position.set(...v.pos); controls.target.set(...v.target); controls.update(); dirty = true; };
-  controls.enableDamping = true; controls.minDistance = .3; controls.maxDistance = 5.5;
-  controls.minAzimuthAngle = -1.2; controls.maxAzimuthAngle = 1.2; controls.maxPolarAngle = Math.PI * .5; controls.enablePan = false;
+  controls.enableDamping = true; controls.enablePan = false; controls.zoomSpeed = .9;
+  // Two camera modes. Inside: in the cabin, facing the porthole. Outside: the module in its world.
+  // Outside the max distance shows the whole module and its surroundings (far less than the 6 km world);
+  // the polar limit keeps the camera above the ground (in orbit, with no ground, it is free).
+  const MODES = {
+    inside: { pos: [.75, 1.45, 1.25], target: [WIN.x, WIN.y, WIN.z], min: .3, max: 5.5, az: 1.2, polar: Math.PI * .5 },
+    outside: { pos: [6.8, 3.4, 9.6], target: [0, 1.1, -.2], min: 4.5, max: 60, az: Infinity, polar: Math.PI * .47 },
+  };
+  let mode = 'inside', camAnim = null;
+  function applyLimits() {
+    const m = MODES[mode], orbit = outside.env === 'space';
+    controls.minDistance = m.min; controls.maxDistance = m.max;
+    controls.minAzimuthAngle = -m.az; controls.maxAzimuthAngle = m.az;
+    controls.minPolarAngle = 0; controls.maxPolarAngle = mode === 'outside' && orbit ? Math.PI : m.polar;
+  }
+  function loosen() { controls.minDistance = 0; controls.maxDistance = Infinity; controls.minAzimuthAngle = -Infinity; controls.maxAzimuthAngle = Infinity; controls.minPolarAngle = 0; controls.maxPolarAngle = Math.PI; }
+  function setMode(next, instant = false) {
+    mode = next in MODES ? next : 'inside'; const m = MODES[mode];
+    camAnim = { t: 0, dur: instant || reduce ? 0 : 1.3, p0: camera.position.clone(), t0: controls.target.clone(), p1: new THREE.Vector3(...m.pos), t1: new THREE.Vector3(...m.target) };
+    loosen(); dirty = true;
+  }
+  // raw placement for tests and screenshots: no clamping until the next setMode()
+  function setCamera(pos, target) { camAnim = null; loosen(); camera.position.set(...pos); controls.target.set(...target); controls.update(); dirty = true; }
   function resize() { const w = host.clientWidth, h = host.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
     smoke.points.material.uniforms.uScale.value = dust.points.material.uniforms.uScale.value = h * .9; dirty = true; }
-  let dirty = true; setView('overview');
+  let dirty = true; setMode('inside', true);
   new ResizeObserver(resize).observe(host); resize();
   let visible = true; new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(host);
   controls.addEventListener('change', () => { dirty = true; });
 
   // ---------- environment changes: re-apply g, wake every body, re-place items ----------
-  let g = 0, gEarth = 9.80665, env = null, drop = null;
+  let g = 0, gEarth = 9.80665, env = null, drop = null, envFade = null, pendingEnv = null;
+  function applyWorld(id) {
+    outside.setEnv(id);
+    if (TEST_BG) { scene.background = null; scene.fog = null; renderer.setClearColor(0xff00ff, 1); }
+    applyLimits();
+  }
   const rand = rng(42);
   function placeItems(zeroG) {
     world.allowSleep = !zeroG;
@@ -508,10 +494,9 @@ export async function initCabin(host, getState) {
     cancelDrop();
     smoke.list.length = 0; dust.list.length = 0;
     const L = LIGHT[env] || LIGHT.earth; Object.assign(lightNow, { target: L });
-    // cross-fade the porthole view and caption (no fade on the very first environment)
-    const first = !views[0].material.map;
-    viewFront = 1 - viewFront; views[viewFront].material.map = viewTex[env]; views[viewFront].material.needsUpdate = true; viewFade = 0;
-    if (first) { views[1 - viewFront].material.map = viewTex[env]; views[1 - viewFront].material.needsUpdate = true; viewFade = 1; }
+    // the world outside: fade the exposure down, swap, fade back up (smooth change of view)
+    envFade = envFade === null ? 1 : 0; pendingEnv = env;
+    if (envFade === 1) applyWorld(env);
     caption.material.map = capTex[env]; caption.material.needsUpdate = true;
     if (reduce) settle(4);
     dirty = true;
@@ -563,6 +548,7 @@ export async function initCabin(host, getState) {
     if (s.env !== env || s.g !== g) setEnvironment(s);
     const key = `${s.flow}|${s.soot}|${s.out}`; if (key !== frame.key) { frame.key = key; dirty = true; }
     if (!visible || (reduce && !dirty)) return;
+    perf.begin();
     fpsFrames++; const now = performance.now(); if (now - fpsT0 > 1000) { fps = fpsFrames * 1000 / (now - fpsT0); fpsFrames = 0; fpsT0 = now; }
     // fixed 1/120 s steps covering the real elapsed time; if a frame is very late the backlog
     // is dropped (the scene runs in slow motion) — the physics and the sim clock stay exact
@@ -582,9 +568,11 @@ export async function initCabin(host, getState) {
     lightNow.sunI += (L.sunI - lightNow.sunI) * k; lightNow.hemiI += (L.hemiI - lightNow.hemiI) * k;
     sun.color.lerp(sunC.set(L.sun), k); sun.intensity = lightNow.sunI; sun.shadow.radius = L.radius;
     hemi.color.lerp(hs.set(L.hemiSky), k); hemi.groundColor.lerp(hg.set(L.hemiGround), k); hemi.intensity = lightNow.hemiI;
-    viewFade = Math.min(1, viewFade + (reduce ? 1 : dtReal / 1.2));
-    views[viewFront].material.opacity = viewFade; views[1 - viewFront].material.opacity = 1 - viewFade * .999; views[viewFront].renderOrder = 2; views[1 - viewFront].renderOrder = 1;
-    caption.material.opacity = .35 + .65 * viewFade;
+    if (envFade < 1) {   // 0 -> 0.5: dim, swap the world, 0.5 -> 1: brighten
+      const before = envFade; envFade = Math.min(1, envFade + (reduce ? 1 : dtReal / 1.0));
+      if (before < .5 && envFade >= .5) applyWorld(pendingEnv);
+      renderer.toneMappingExposure = .2 + .8 * Math.abs(envFade - .5) * 2;
+    } else renderer.toneMappingExposure = 1;
 
     // flame (decor items never burn): shape from g/g_Earth and the airflow only
     alive += ((s.out ? 0 : 1) - alive) * (reduce ? 1 : Math.min(1, dtReal * 2.5));
@@ -624,12 +612,22 @@ export async function initCabin(host, getState) {
     smoke.flush(p => { const q = p.life / p.max; return (p.kind === 'vapor' ? .3 : .2) * Math.sin(Math.PI * Math.min(1, q * 1.5)) * (1 - q); });
     dust.flush(p => .6 * (1 - p.life / p.max));
 
-    controls.update(); renderer.render(scene, camera); dirty = false;
+    if (camAnim) {   // smooth transition between camera modes (ease in-out)
+      camAnim.t += dtReal; const k = camAnim.dur ? Math.min(1, camAnim.t / camAnim.dur) : 1, e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      camera.position.lerpVectors(camAnim.p0, camAnim.p1, e); controls.target.lerpVectors(camAnim.t0, camAnim.t1, e);
+      if (k >= 1) { camAnim = null; applyLimits(); } dirty = true;
+    }
+    controls.update(); outside.update(camera, t); renderer.render(scene, camera); dirty = false;
+    perf.end();
+    if (!frame.first) { frame.first = true; performance.mark('mf-3d-first-frame'); }
   }
+  const perf = createPerf(renderer, () => ({ particles: smoke.list.length + dust.list.length, bodies: world.bodies.length,
+    bodiesAwake: world.bodies.filter(b => b.mass > 0 && b.sleepState !== CANNON.Body.SLEEPING).length, quality: 'n/a', scale: 1, dpr: renderer.getPixelRatio() }));
   frame();
   return {
-    scene, camera, controls, renderer, world, items, setView, STEP,
+    scene, camera, controls, renderer, world, items, setView, STEP, setMode, setCamera, MODES,
+    get mode() { return mode; }, get worldEnv() { return outside.env; },
     dropTest: (onTick) => dropTest(onTick),   // no UI: used by the automated gravity test
-    get g() { return g; }, get fps() { return fps; }, get simTime() { return simTime; },
+    get g() { return g; }, get fps() { return fps; }, get simTime() { return simTime; }, perf: () => perf.snapshot(),
   };
 }

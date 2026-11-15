@@ -32,7 +32,7 @@ app.add_middleware(
 )
 # Only these folders are public: page images, vendored three.js and page scripts
 # (never the whole frontend folder with node_modules). Nothing is loaded from the network.
-for _name in ('assets', 'vendor', 'js'):
+for _name in ('assets', 'vendor', 'js', 'css'):
     if (FRONTEND_DIR / _name).is_dir():
         app.mount(f'/{_name}', StaticFiles(directory=FRONTEND_DIR / _name), name=_name)
 

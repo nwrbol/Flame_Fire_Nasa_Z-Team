@@ -64,7 +64,7 @@ class RequestGuard:
                     headers.append((b'content-security-policy', CSP))
                 # page scripts change with the site: always revalidate (ETag -> cheap 304), so a
                 # browser never runs a stale scene script against a newer page
-                if scope.get('path', '').startswith(('/js/', '/vendor/')) and \
+                if scope.get('path', '').startswith(('/js/', '/vendor/', '/css/')) and \
                         not any(k.lower() == b'cache-control' for k, _ in headers):
                     headers.append((b'cache-control', b'no-cache'))
                 message['headers'] = headers

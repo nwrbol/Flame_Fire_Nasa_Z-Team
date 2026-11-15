@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liquid Glass buttons</title>
+<link rel="stylesheet" href="../frontend/css/glass.css">
+<style>
+  body { margin: 0; min-height: 100vh; font: 15px/1.4 system-ui, sans-serif; display: grid; gap: 0; }
+  section { padding: 48px 24px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: center; }
+  h2 { width: 100%; text-align: center; margin: 0 0 8px; font-weight: 600; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+  .grad { background: linear-gradient(120deg, #ff7a59, #ffb347 30%, #6dd5ed 65%, #8e7cff); }
+  .grad h2 { color: #1b1b1b; }
+  .photo { background:   /* "photo": a procedural night sky over a sunset, no image download */
+      radial-gradient(2px 2px at 20% 30%, #fff, transparent), radial-gradient(1.5px 1.5px at 70% 20%, #fff, transparent),
+      radial-gradient(1px 1px at 45% 12%, #fff, transparent), radial-gradient(1px 1px at 85% 40%, #fff, transparent),
+      linear-gradient(180deg, #0b1030 0%, #2c2a6b 45%, #c2456b 78%, #f6a04d 100%); }
+  .photo h2 { color: #f4f6fb; }
+  .glass-btn { font: 600 15px system-ui, sans-serif; }
+  .glass-btn:not(.glass-btn--small):not(.glass-btn--round) { padding: 12px 22px; }
+</style>
+</head>
+<body>
+<section class="grad">
+  <h2>On a gradient</h2>
+  <button class="glass-btn">Default</button>
+  <button class="glass-btn glass-btn--primary">Primary</button>
+  <button class="glass-btn glass-btn--small">Small</button>
+  <button class="glass-btn glass-btn--rect">Rectangle</button>
+  <button class="glass-btn glass-btn--round" aria-label="Close">✕</button>
+  <button class="glass-btn" disabled>Disabled</button>
+</section>
+<section class="photo">
+  <h2>On a dark photo</h2>
+  <button class="glass-btn glass-btn--on-dark">On dark</button>
+  <button class="glass-btn glass-btn--primary">Primary</button>
+  <button class="glass-btn glass-btn--on-dark glass-btn--small">Small</button>
+  <button class="glass-btn glass-btn--on-dark glass-btn--round" aria-label="Add">+</button>
+</section>
+<script src="../frontend/js/glass.js"></script>
+</body>
+</html>

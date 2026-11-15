@@ -26,7 +26,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
-@media (max-width:480px){.wrap{padding:0 16px}nav .wrap{gap:12px}nav ul a{padding:6px 8px}.panel{padding:20px}.seg button{padding:7px 12px}.stats{gap:28px}.stats b{font-size:30px}.readout b{font-size:18px}.readout div{padding:14px 12px}}
+@media (max-width:480px){.wrap{padding:0 16px}nav .wrap{gap:12px}nav ul a{padding:6px 8px}.panel{padding:20px}.seg button{padding:7px 12px}.stats{gap:28px}.stats b{font-size:30px}}
 
 /* nav */
 nav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
@@ -141,8 +141,10 @@ input[type=range]:disabled{opacity:.35}
 .viz .canvas{min-height:380px}
 .viz .canvas canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 .illus{position:absolute;left:14px;top:12px;z-index:2;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.1);color:#d9d9d4;pointer-events:none}
+.cam-seg{position:absolute;right:12px;top:10px;z-index:2;display:flex;gap:4px;padding:4px;border-radius:99px}
+.cam-seg button{padding:6px 14px;border-radius:99px;font-size:12.5px;font-weight:600;color:#e9ecf2}
+@media (max-width:480px){.cam-seg{top:auto;bottom:10px;right:10px}}
 .no3d{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#a5a59e;font-size:14px}
-.readout b.nodata{font-size:14px;color:#8c8c86;font-weight:500}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--card);border:2px solid var(--fg);cursor:grab;transition:transform .15s}
 input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2);border-color:var(--accent)}
 input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--card);border:2px solid var(--fg)}
@@ -152,10 +154,6 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .viz .canvas{position:relative;flex:1;min-height:320px}
 .viz canvas{position:absolute;inset:0;width:100%;height:100%}
 .sim>*{min-width:0}
-.readout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow-wrap:anywhere;border-top:1px solid #222}
-.readout div{padding:18px 20px}.readout div+div{border-left:1px solid #222}
-.readout small{display:block;font-size:12px;color:#8c8c86}
-.readout b{font-size:24px;font-weight:500}
 
 /* chips */
 .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid var(--line);border-radius:99px;font-size:13px;text-decoration:none;background:var(--card);transition:.15s}
@@ -287,6 +285,8 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px}
 footer a{text-decoration:none}footer a:hover{color:var(--fg)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}html{scroll-behavior:auto}.reveal{opacity:1;translate:none}}
 </style>
+<link rel="stylesheet" href="/css/glass.css">
+<script src="/js/glass.js" defer></script>
 </head>
 <body>
 
@@ -360,12 +360,8 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
       </div>
       <div class="viz">
         <div class="canvas" id="scene3d"><span class="illus">Illustration</span>
+          <div class="cam-seg" role="group" aria-label="Camera" hidden><button type="button" data-cam="inside" aria-pressed="true">Inside</button><button type="button" data-cam="outside" aria-pressed="false">Outside</button></div>
           <p class="no3d" id="no3d" hidden>3D view needs WebGL, which this browser does not provide. The NASA test data around it still works.</p></div>
-        <div class="readout">
-          <div><small>Flame front · NASA</small><b class="mono" id="rSpread">—</b></div>
-          <div><small>Outcome · NASA</small><b id="rOutcome">—</b></div>
-          <div><small>Burn time · NASA</small><b class="mono" id="rBurn">—</b></div>
-        </div>
         <div class="nearest" id="nearest" aria-live="polite"><small>Closest real test</small><p class="nt">Loading…</p></div>
       </div>
     </div>
@@ -529,14 +525,9 @@ async function fetchNearest(){
   catch(e){console.error('renderNearest failed',e);$('nearest').replaceChildren(el('small',null,'Closest real test'),el('p','nt','Display error — reload the page (Ctrl+F5).'))}
 }
 const fmt=(v,d=1)=>v==null?null:(+v).toFixed(d).replace(/\.0+$/,'');
-function setReadout(id,text){const b=$(id);b.textContent=text??'not in NASA data';b.classList.toggle('nodata',text==null)}
 function renderNearest(){
   const box=$('nearest'),t=near&&near.test,ok=!!(near&&near.within);
   $('simPanel').classList.toggle('out',!ok);$('untestedBadge').hidden=ok;
-  // Numbers only from a test inside tolerance; otherwise say so.
-  setReadout('rSpread',ok&&t.spread_rate_mm_s!=null?fmt(t.spread_rate_mm_s)+' mm/s':null);
-  setReadout('rOutcome',ok&&t.outcome_text?(t.outcome==='extinguished'?'self-extinguished':t.outcome==='burned'?'kept burning':t.outcome_text.split(/[;(]/)[0].trim()):null);
-  setReadout('rBurn',ok&&t.burn_time_s!=null?fmt(t.burn_time_s)+' s':null);
   const p=el('p','nt');
   if(!t){p.textContent='No '+(mat?mat.label:'')+' test states both O₂ and pressure.';box.replaceChildren(el('small',null,'Closest real test'),p);return}
   const cond=`O₂ ${t.o2[0]===t.o2[1]?fmt(t.o2[0]):fmt(t.o2[0])+'–'+fmt(t.o2[1])}% · ${fmt(t.pressure_kpa)} kPa${t.pressure_assumed?' (assumed)':''} · flow ${t.flow_cm_s==null?'not recorded':fmt(t.flow_cm_s)+' cm/s'}${t.thickness_mm!=null?' · '+fmt(t.thickness_mm,2)+' mm':''}`;
@@ -882,6 +873,12 @@ if (!gl) {
   try {
     const { initCabin } = await import('/js/cabin3d.js');
     window.cabin3d = await initCabin(host, window.flameState);
+    // camera modes: inside the cabin (facing the porthole) / outside (the module in its world)
+    const camSeg = host.querySelector('.cam-seg'); camSeg.hidden = false;
+    camSeg.querySelectorAll('[data-cam]').forEach(b => b.onclick = () => {
+      window.cabin3d.setMode(b.dataset.cam);
+      camSeg.querySelectorAll('[data-cam]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    });
   } catch (err) {
     console.error('3D scene failed', err);
     document.getElementById('no3d').hidden = false;
