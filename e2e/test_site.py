@@ -186,5 +186,53 @@ class SiteTests(unittest.TestCase):
         self.assertTrue(all(v > 0 for v in out.values()))
 
 
+    def phone(self):
+        ctx = self.browser.new_context(viewport={'width': 375, 'height': 667}, is_mobile=True, has_touch=True,
+                                       device_scale_factor=2, bypass_csp=True)
+        page = ctx.new_page(); page.goto(self.base + '/'); page.wait_for_timeout(1200)
+        return ctx, page
+
+    def test_9_mobile_chat_fits_and_closes(self):
+        ctx, page = self.phone()
+        try:
+            rect = "e => { const b = document.querySelector(e).getBoundingClientRect(); return [b.left, b.top, b.right, b.bottom]; }"
+            page.evaluate('scrollTo(0, 1400)'); page.tap('#chatFab'); page.wait_for_timeout(500)
+            chat, close = page.evaluate(rect, '.chat'), page.evaluate(rect, '#chatClose')
+            self.assertEqual([round(v) for v in chat], [0, 0, 375, 667])            # full screen, nothing outside
+            self.assertTrue(0 <= close[1] and close[3] <= 667 and close[2] <= 375)  # close button on screen
+            self.assertGreaterEqual(close[2] - close[0], 40)                         # finger-sized
+            self.assertEqual(page.evaluate("getComputedStyle(document.querySelector('#chatInput')).fontSize"), '16px')
+            self.assertEqual(page.evaluate('getComputedStyle(document.body).overflow'), 'hidden')
+            self.assertNotEqual(page.evaluate('document.activeElement.id'), 'chatInput')  # no keyboard pop-up
+            # on-screen keyboard: the visible viewport shrinks; header and composer must stay visible
+            page.evaluate("document.documentElement.style.setProperty('--vv-h', '360px')"); page.wait_for_timeout(300)
+            self.assertLessEqual(page.evaluate(rect, '.composer')[3], 360)
+            self.assertGreaterEqual(page.evaluate(rect, '#chatClose')[1], 0)
+            page.tap('#chatClose'); page.wait_for_timeout(300)
+            self.assertFalse(page.evaluate("document.body.classList.contains('chat-open')"))
+            self.assertEqual(page.evaluate('document.documentElement.scrollWidth'), 375)
+        finally:
+            ctx.close()
+
+    def test_10_theme_switch(self):
+        ctx = self.browser.new_context(viewport={'width': 1280, 'height': 900}, color_scheme='light', bypass_csp=True)
+        page = ctx.new_page()
+        try:
+            page.goto(self.base + '/'); page.wait_for_timeout(1000)
+            bg = lambda: page.evaluate('getComputedStyle(document.body).backgroundColor')
+            self.assertEqual(bg(), 'rgb(246, 245, 241)')                       # follows the system (light)
+            page.click('#themeBtn'); page.wait_for_timeout(200)
+            self.assertEqual(page.evaluate('document.documentElement.dataset.theme'), 'dark')
+            self.assertEqual(bg(), 'rgb(15, 15, 14)')
+            self.assertEqual(page.get_attribute('#themeBtn', 'aria-label'), 'Switch to light theme')
+            page.screenshot(path=str(SHOTS / 'theme-dark.png'))
+            page.reload(); page.wait_for_timeout(800)
+            self.assertEqual(bg(), 'rgb(15, 15, 14)')                          # remembered after reload
+            page.click('#themeBtn'); page.wait_for_timeout(200)
+            self.assertEqual(bg(), 'rgb(246, 245, 241)')
+            page.screenshot(path=str(SHOTS / 'theme-light.png'))
+        finally:
+            ctx.close()
+
 if __name__ == '__main__':
     unittest.main()
