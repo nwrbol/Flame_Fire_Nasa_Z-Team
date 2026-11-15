@@ -292,6 +292,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
     <a class="logo" href="#top" aria-label="MicroFlame, back to top"><span class="lg-m">Micro</span><span class="lg-f">F<span class="lg-l" aria-hidden="true"></span>ame</span></a>
     <ul>
       <li><a href="#sim">Simulator</a></li>
+      <li><a href="#gaps">Gap map</a></li>
       <li><a href="#archive">Catalogue</a></li>
       <li><a href="#records">Data</a></li>
     </ul>
@@ -364,9 +365,18 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
   </div>
 </section>
 
+<section id="gaps">
+  <div class="wrap reveal">
+    <p class="kicker">02 · Gap map</p>
+    <h2>Where NASA has tested — and where it has not.</h2>
+    <p class="lead">Every NASA PSI test record placed by oxygen and pressure. Empty cells are gaps: no test exists there. Counted from the dataset, no model.</p>
+    <div id="gapMap" class="gapmap" aria-live="polite"><p class="status">Loading the gap map…</p></div>
+  </div>
+</section>
+
 <section id="archive">
   <div class="wrap reveal">
-    <p class="kicker">02 · Catalogue</p>
+    <p class="kicker">03 · Catalogue</p>
     <h2>NASA PSI investigations.</h2>
     <p class="lead">Click an investigation to expand its description. If measurements are connected, open them with one click.</p>
     <div class="cat" id="archiveGrid" aria-live="polite"><p class="status">Loading catalogue…</p></div>
@@ -375,7 +385,7 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
 
 <section id="records">
   <div class="wrap reveal">
-    <p class="kicker">03 · Data</p>
+    <p class="kicker">04 · Data</p>
     <h2>Test records.</h2>
     <p class="lead" id="recSource"></p>
     <div class="notice" id="recBanner" hidden>Showing test data, not real measurements.</div>
@@ -456,8 +466,11 @@ if(!reduce)addEventListener('pointermove',e=>{
   const x=(e.clientX/innerWidth-.5)*40,y=(e.clientY/innerHeight-.5)*40;
   $('orb').style.transform=`translate(${x}px,${y}px)`});
 
+// The server already writes the numbers into the page; only update when they differ (no count-up delay).
 function countUp(node,to){
-  if(reduce||!Number.isFinite(to)){node.textContent=to;return}
+  const v=Number.isFinite(to)?to.toLocaleString('en'):String(to);
+  if(node.textContent===v)return;
+  if(reduce||!Number.isFinite(to)||node.textContent!=='—'){node.textContent=v;return}
   const t0=performance.now();
   (function step(t){const k=Math.min(1,(t-t0)/900);node.textContent=Math.round(to*(1-Math.pow(1-k,3))).toLocaleString('en');if(k<1)requestAnimationFrame(step)})(t0);
 }
@@ -874,6 +887,20 @@ if (!gl) {
     document.getElementById('no3d').hidden = false;
   }
 }
+</script>
+<script type="module">
+// Gap map: its own chunk. Loaded when the section comes near the viewport, or once the
+// page is idle anyway (so it is ready before anyone scrolls there); never blocks the 3D scene.
+const gapHost = document.getElementById('gapMap');
+let gapStarted = false;
+const loadGaps = async () => {
+  if (gapStarted) return; gapStarted = true;
+  try { const { mountAnalytics } = await import('/js/analytics.js'); window.gapMapApi = await mountAnalytics(gapHost, { gapsOnly: true }); }
+  catch (err) { console.error('gap map failed', err); gapHost.replaceChildren(Object.assign(document.createElement('p'), { className: 'status', textContent: 'Gap map unavailable: ' + err.message })); }
+};
+new IntersectionObserver((es, o) => { if (es.some(e => e.isIntersecting)) { o.disconnect(); loadGaps(); } }, { rootMargin: '800px 0px' }).observe(gapHost);
+const idle = window.requestIdleCallback || ((f) => setTimeout(f, 1500));
+addEventListener('load', () => idle(loadGaps, { timeout: 3000 }));
 </script>
 </body>
 </html>

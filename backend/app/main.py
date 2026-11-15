@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import Literal
 
-from . import knowledge, simulator
+from . import analytics as analytics_mod, knowledge, simulator
 from .security import RequestGuard
 from .csv_data import read_dataset
 from .investigations import INVESTIGATIONS
@@ -82,13 +82,34 @@ def load_dataset():
     return rows, columns, source
 
 
+_STATS = {}
+
+
+def hero_stats():
+    """Counts for the hero, recomputed only when the CSV file changes."""
+    path = Path(os.getenv('EXPERIMENTS_CSV', str(DEFAULT_CSV)))
+    key = (str(path), path.stat().st_mtime_ns if path.exists() else 0)
+    if _STATS.get('key') != key:
+        rows, columns, _ = load_dataset()
+        _STATS.update(key=key, value={'statTotal': f'{len(rows):,}', 'statCols': str(len(columns)), 'statInv': str(len(INVESTIGATIONS))})
+    return _STATS['value']
+
+
 @app.get('/', include_in_schema=False)
 def frontend():
     # Same-origin page: the browser calls /api/* without CORS or a dev proxy.
     if not FRONTEND_INDEX.is_file():
         raise HTTPException(404, 'Frontend is not bundled with this backend')
+    # The hero numbers are written into the page here, so they are visible on first paint
+    # (no wait for /api/metadata, no count-up). They are counted from the data, never typed in.
+    html = FRONTEND_INDEX.read_text(encoding='utf-8')
+    try:
+        for key, value in hero_stats().items():
+            html = html.replace(f'id="{key}">—<', f'id="{key}">{value}<', 1)
+    except HTTPException:
+        pass                       # the page still loads; the script fills in or shows n/a
     # no-cache: the browser revalidates on every load, so it never runs a stale page against a newer API
-    return FileResponse(FRONTEND_INDEX, media_type='text/html', headers={'Cache-Control': 'no-cache'})
+    return Response(html, media_type='text/html', headers={'Cache-Control': 'no-cache'})
 
 
 @app.get('/health')
@@ -207,11 +228,21 @@ def export(
     filter_field: str | None = None,
     filter_value: str | None = None,
     q: str | None = Query(None, max_length=100),
+    analytics: str | None = Query(None, max_length=4000),
 ):
-    """Download every row matching the current filter/search (no pagination), all columns."""
+    """Download every row matching the current filter/search (no pagination), all columns.
+    `analytics`: the Analytics dashboard filter (JSON), applied with the same derivation the
+    dashboard uses, so the download has exactly the rows the charts count."""
     rows, columns, source = filtered_rows(filters, filter_field, filter_value, q)
+    if isinstance(analytics, str):          # (a plain call outside FastAPI passes the Query default)
+        try:
+            crit = analytics_mod.validate_filter(json.loads(analytics))
+        except (ValueError, TypeError, RecursionError) as error:
+            raise HTTPException(422, f'analytics filter: {error}') from error
+        platforms = {s.get('acronym'): s.get('platform', '') for s in json.loads((DATASET_DIR / 'studies.json').read_text(encoding='utf-8'))}
+        rows = [row for row in rows if analytics_mod.matches(analytics_mod.derive(row['values'], platforms), crit)]
     names = [column['name'] for column in columns]
-    stem = 'firegap_tests' + (f'_{filter_value}' if filter_value else '') + ('_search' if q else '')
+    stem = 'firegap_tests' + (f'_{filter_value}' if filter_value else '') + ('_search' if q else '') + ('_analytics' if isinstance(analytics, str) else '')
     stem = ''.join(ch if ch.isalnum() or ch in '-_' else '_' for ch in stem)[:80]
     if format == 'csv':
         buffer = io.StringIO()
