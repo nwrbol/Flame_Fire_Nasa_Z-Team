@@ -72,25 +72,21 @@ def main():
             p.wait_for_function('window.cabin3d && performance.getEntriesByName("mf-3d-first-frame").length', timeout=120000)
             meta['first_frame_ms'] = round(p.evaluate('performance.getEntriesByName("mf-3d-first-frame")[0].startTime'))
             meta['renderer'] = p.evaluate("(() => { const gl = cabin3d.renderer.getContext(); const e = gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : 'n/a'; })()")
-            m = p.evaluate('cabin3d.MODES.outside')
-            t = m['target']; d = m['max']
-            far_pos = [t[0] + d * math.sin(1.1) * math.sin(.6), t[1] + d * math.cos(1.1), t[2] + d * math.sin(1.1) * math.cos(.6)]
             for env in ENVS:
                 t_click = time.perf_counter()
                 p.click(f'[data-env="{env}"]')
                 p.evaluate("document.getElementById('scene3d').scrollIntoView({block:'center'})")
-                p.wait_for_function(f"cabin3d.worldEnv === '{env}'", timeout=120000, polling=50)
+                p.wait_for_function(f"cabin3d.viewEnv === '{env}'", timeout=120000, polling=50)
                 meta.setdefault('env_switch_ms', {})[env] = round((time.perf_counter() - t_click) * 1000)
                 p.wait_for_timeout(1500)
-                for mode in ('inside', 'outside', 'outside-max'):
-                    if mode == 'outside-max':
-                        p.evaluate(f'cabin3d.setCamera({far_pos}, {t})')
+                for mode, pos in (('overview', None), ('corner', [1.8, 2.1, 1.3]), ('window-close', [-.95, 1.5, -1.3])):
+                    if pos is None:
+                        p.evaluate("cabin3d.setView('overview')")
                     else:
-                        p.evaluate(f"cabin3d.setMode('{mode}', true)")
+                        p.evaluate(f'cabin3d.setCamera({pos}, [0, 1.2, 0])')
                     p.wait_for_timeout(int(a.seconds * 1000))
                     s = p.evaluate('cabin3d.perf()')
                     rows.append({'env': env, 'mode': mode, **s})
-            p.evaluate("cabin3d.setMode('inside', true)")
             b.close()
     finally:
         srv.terminate(); srv.wait(10)

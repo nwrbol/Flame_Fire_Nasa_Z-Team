@@ -11,16 +11,22 @@
 import * as THREE from 'three';
 import * as CANNON from '/vendor/cannon-es.js';
 import { OrbitControls } from '/vendor/OrbitControls.js';
-import { createWorld, FAR, SUN_DIR } from '/js/world3d.js';
 import { createPerf } from '/js/perf.js';
 
 export const STEP = 1 / 120;
-const W = 4.2, H = 2.4, D = 3.2;                 // cabin (m); the +Z wall is cut away towards the camera
+// Sunlight comes in through the porthole (from behind the back wall).
+const SUN_DIR = new THREE.Vector3(-.25, .42, -.87).normalize();
+const W = 4.2, H = 2.4, D = 3.2;                 // cabin (m), closed on all sides; the camera stays inside
 const TOP = 0.93;                                // workbench surface height (m)
 const SAMPLE = new THREE.Vector3(0, TOP + 0.001, 0.1);
 const WIN = { x: -0.95, y: 1.5, r: 0.32, z: -D / 2 };   // porthole in the back wall
 const SHELF_Y = [0.8, 1.3, 1.8], SHELF_X = 1.1, SHELF_Z = -D / 2 + 0.2;
 const DROP = { x: 1.15, z: 1.05, h: 1.0 };       // drop test: book released with its bottom 1.00 m above the floor
+// Camera limits (m, rad, deg): the camera never leaves the room.
+const LIMITS = { wallMargin: .3, objectMargin: .15, minDistance: .4, maxDistance: 2.3, minPolar: Math.PI * .28, maxPolar: Math.PI * .7, fov: 60 };
+const ROOM = { min: new THREE.Vector3(-W / 2 + LIMITS.wallMargin, LIMITS.wallMargin, -D / 2 + LIMITS.wallMargin),
+               max: new THREE.Vector3(W / 2 - LIMITS.wallMargin, H - LIMITS.wallMargin, D / 2 - LIMITS.wallMargin) };
+const CENTER = new THREE.Vector3(0, 1.2, 0);
 // Smoke parcel thermodynamics (documented physical parameters, identical in every environment)
 const T_AIR = 293, T_SMOKE0 = 400, TAU_COOL = 1.5, TAU_DRAG = 0.15, D_TURB = 1e-3;
 
@@ -72,7 +78,8 @@ const screenTex = (tint) => canvasTex(256, 160, (g) => {
   for (let i = 0; i < 6; i++) g.fillRect(18, 20 + i * 20, 120 + (i % 3) * 30, 6);
 });
 
-const VIEWS = { earth: ['View: Earth (ground reference)'], moon: ['View: Moon'], mars: ['View: Mars'], space: ['View from orbit (example)'] };
+const VIEWS = { earth: ['View: Earth'], moon: ['View: Moon'], mars: ['View: Mars'], space: ['View: orbit'] };
+const VIEW_ID = { earth: 0, moon: 1, mars: 2, space: 3 };
 // Sunlight through the porthole: hard shadows on the Moon and in orbit (no atmosphere), soft on Earth.
 const LIGHT = {
   earth: { sun: '#fff3df', sunI: 2.4, radius: 7, hemiSky: '#a9c6f2', hemiGround: '#6b5d4b', hemiI: 1.15 },
@@ -121,6 +128,58 @@ function flameMaterial() {
         float aTall = pow(facing, 1.2) * (1.0 - smoothstep(0.8, 1.0, vH)) * (0.55 + 0.45 * smoothstep(0.0, 0.2, vH));
         float k = smoothstep(0.0, 0.85, uG); vec3 col = mix(dome, tall, k); float a = mix(aDome, aTall, k) * uAlive;
         gl_FragColor = vec4(col * a, a);
+      }`,
+  });
+}
+// Picture behind the porthole, by direction from the dome centre (cheap: no textures, no fBm).
+// uView: 0 Earth (sky, clouds, horizon), 1 Moon (grey ground, black sky, stars, small Earth),
+// 2 Mars (ochre ground, butterscotch sky, small Sun), 3 orbit (stars and the limb of the Earth).
+function viewMaterial() {
+  return new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: { uView: { value: 0 }, uFade: { value: 1 }, uSun: { value: SUN_DIR.clone() }, uTime: { value: 0 } },
+    vertexShader: `varying vec3 vDir; void main(){ vDir = mat3(modelMatrix) * position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `
+      uniform int uView; uniform float uFade, uTime; uniform vec3 uSun; varying vec3 vDir;
+      float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
+      float f3(vec2 p){ return .55 * n2(p) + .3 * n2(p * 2.1) + .15 * n2(p * 4.3); }
+      float stars(vec3 d){ vec3 q = floor(d * 260.0); float s = fract(sin(dot(q, vec3(12.9898, 78.233, 37.719))) * 43758.5453); return step(.996, s) * (.5 + .5 * fract(s * 91.0)); }
+      void main(){
+        vec3 d = normalize(vDir); float h = d.y, sa = acos(clamp(dot(d, normalize(uSun)), -1.0, 1.0));
+        vec2 gp = d.xz / max(.02, -h);                       // ground-plane coordinates (perspective)
+        vec3 c;
+        if (uView == 0) {          // Earth: blue sky, clouds, hazy horizon, green fields
+          c = mix(vec3(.80, .87, .93), vec3(.25, .47, .79), pow(clamp(h, 0.0, 1.0), .55));
+          c = mix(c, vec3(1.0), smoothstep(.55, .8, f3(d.xz / (h + .15) * 2.0 + vec2(uTime * .01, 0.0))) * .8 * smoothstep(.02, .15, h));
+          c += vec3(1.0, .95, .85) * (exp(-sa * 9.0) * .45 + smoothstep(.006, .004, sa) * 3.0);
+          vec3 g = mix(vec3(.30, .42, .22), vec3(.42, .52, .30), f3(gp * 1.5));
+          if (h < 0.0) c = mix(g, vec3(.66, .71, .66), exp(h * 14.0));
+        } else if (uView == 1) {   // Moon: sharp horizon, black sky, stars, the Earth small in the sky
+          c = vec3(stars(d));
+          vec3 e = normalize(vec3(-.47, .10, -.875)); float ea = acos(clamp(dot(d, e), -1.0, 1.0));
+          if (ea < .05) { vec3 n = normalize(d - e * .9); float lit = clamp(.35 + dot(n, normalize(vec3(.7, .3, .6))) * .9, 0.0, 1.0);
+            c = mix(vec3(.12, .3, .65), vec3(.9), smoothstep(.55, .7, n2(d.xy * 90.0))) * lit; }
+          c += vec3(1.0) * smoothstep(.006, .004, sa) * 3.0;
+          float cr = f3(gp * 2.2); vec3 g = vec3(.52, .52, .50) * (.75 + .5 * cr) - vec3(.12) * smoothstep(.62, .7, n2(gp * 5.0));
+          if (h < 0.0) c = mix(g, vec3(.30), exp(h * 30.0) * .6);
+        } else if (uView == 2) {   // Mars: dusty butterscotch sky, small pale Sun, ochre ground with stones
+          c = mix(vec3(.89, .74, .59), vec3(.72, .52, .37), pow(clamp(h, 0.0, 1.0), .6));
+          c += vec3(1.0, .95, .9) * (exp(-sa * 14.0) * .3 + smoothstep(.004, .0028, sa) * 2.5);
+          vec3 g = mix(vec3(.62, .34, .18), vec3(.75, .45, .26), f3(gp * 1.8)) - vec3(.2, .12, .07) * smoothstep(.7, .78, n2(gp * 7.0));
+          if (h < 0.0) c = mix(g, vec3(.80, .58, .42), exp(h * 18.0));
+        } else {                   // orbit: stars, the curved limb of the Earth with its blue atmosphere
+          c = vec3(stars(d));
+          vec3 e = normalize(vec3(-.5, -.5, -.72)); float ea = acos(clamp(dot(d, e), -1.0, 1.0)), R = .54;
+          if (ea < R) { vec2 q = vec2(atan(d.x, d.z), d.y) * 6.0;
+            vec3 g = mix(vec3(.04, .16, .42), vec3(.24, .34, .18), smoothstep(.55, .62, f3(q)));
+            g = mix(g, vec3(.95), smoothstep(.55, .75, f3(q * 1.7 + 3.0)) * .8);
+            c = g * (.35 + .65 * smoothstep(R, R * .55, ea)); }
+          c += vec3(.35, .6, 1.0) * exp(-abs(ea - R) * 60.0) * .9;
+          c += vec3(1.0) * smoothstep(.006, .004, sa) * 3.0;
+        }
+        gl_FragColor = vec4(c * uFade, 1.0);
       }`,
   });
 }
@@ -265,7 +324,7 @@ export async function initCabin(host, getState) {
   const small = innerWidth < 760 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
   const MAX_SMOKE = reduce ? 0 : small ? 220 : 650, MAX_DUST = reduce ? 0 : small ? 80 : 220, VIEW_W = small ? 768 : 1280;
 
-  const renderer = new THREE.WebGLRenderer({ antialias: !small, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
+  const renderer = new THREE.WebGLRenderer({ antialias: !small, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, small ? 1.5 : 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = !small; renderer.shadowMap.type = THREE.PCFShadowMap;      // PCF: shadow.radius controls softness
@@ -273,10 +332,9 @@ export async function initCabin(host, getState) {
   renderer.domElement.setAttribute('aria-label', 'Illustration: a cabin with a porthole and a burning fabric sample; drag to orbit, scroll to zoom');
   host.append(renderer.domElement);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(46, 1, 0.05, FAR);
-  // test mode (?testbg): magenta clear colour, so any pixel not covered by the world shows up
+  const camera = new THREE.PerspectiveCamera(LIMITS.fov, 1, 0.05, 20);   // the whole scene is the room + the window view
+  // test mode (?testbg): magenta clear colour, so any pixel outside the room / window view shows up
   const TEST_BG = new URLSearchParams(location.search).has('testbg');
-  const outside = createWorld(scene, { small });
 
   // ---------- physics world ----------
   const world = new CANNON.World({ gravity: V(0, 0, 0) });
@@ -289,17 +347,18 @@ export async function initCabin(host, getState) {
   // ---------- cabin shell with a porthole ----------
   const wallTex = panelTexture('#c9ccd2', '#9ea3ad'); wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping; wallTex.repeat.set(5, 3);
   const floorTex = panelTexture('#7d838d', '#5f646c'); floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping; floorTex.repeat.set(5, 4);
-  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: .85, shadowSide: THREE.DoubleSide });
+  const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: .85, side: THREE.DoubleSide });
   const plane = (w, h, m, x, y, z, rx, ry) => { const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); p.position.set(x, y, z); p.rotation.set(rx, ry, 0); p.receiveShadow = true; p.castShadow = true; scene.add(p); return p; };
-  plane(W, D, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .9 }), 0, 0, 0, -Math.PI / 2, 0);
+  plane(W, D, new THREE.MeshStandardMaterial({ map: floorTex, roughness: .9, side: THREE.DoubleSide }), 0, 0, 0, -Math.PI / 2, 0);
   plane(W, D, wallMat, 0, H, 0, Math.PI / 2, 0);
   plane(D, H, wallMat, -W / 2, H / 2, 0, 0, Math.PI / 2);
   plane(D, H, wallMat, W / 2, H / 2, 0, 0, -Math.PI / 2);
+  plane(W, H, wallMat, 0, H / 2, D / 2, 0, Math.PI);                          // front wall: the room is closed on all sides
   // back wall: a shape with a round hole for the porthole (UVs in metres → one panel per 0.84 × 0.8 m)
   const wallShape = new THREE.Shape(); wallShape.moveTo(-W / 2, 0); wallShape.lineTo(W / 2, 0); wallShape.lineTo(W / 2, H); wallShape.lineTo(-W / 2, H); wallShape.lineTo(-W / 2, 0);
   const hole = new THREE.Path(); hole.absarc(WIN.x, WIN.y, WIN.r, 0, Math.PI * 2, true); wallShape.holes.push(hole);
   const backTex = wallTex.clone(); backTex.repeat.set(1 / .84, 1 / .8); backTex.needsUpdate = true;
-  const back = new THREE.Mesh(new THREE.ShapeGeometry(wallShape, 48), new THREE.MeshStandardMaterial({ map: backTex, roughness: .85, shadowSide: THREE.DoubleSide }));
+  const back = new THREE.Mesh(new THREE.ShapeGeometry(wallShape, 48), new THREE.MeshStandardMaterial({ map: backTex, roughness: .85, side: THREE.DoubleSide }));
   back.position.z = -D / 2; back.receiveShadow = back.castShadow = true; scene.add(back);
   // porthole: wall tunnel, frame ring with bolts, glass with a soft highlight
   const frameMat = std('#5b616b', { m: .7, r: .35 });
@@ -308,34 +367,22 @@ export async function initCabin(host, getState) {
   const ring = new THREE.Mesh(new THREE.TorusGeometry(WIN.r + .03, .035, 16, 64), frameMat); ring.position.set(WIN.x, WIN.y, -D / 2 + .012); ring.castShadow = true; scene.add(ring);
   for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, b = new THREE.Mesh(new THREE.CylinderGeometry(.009, .009, .014, 10), std('#c7ccd3', { m: .9, r: .25 }));
     b.rotation.x = Math.PI / 2; b.position.set(WIN.x + Math.cos(a) * (WIN.r + .03), WIN.y + Math.sin(a) * (WIN.r + .03), -D / 2 + .05); scene.add(b); }
-  // exterior hull, 0.12 m outside the inner walls (single-sided inner planes are invisible from
-  // outside, which used to show the void); the +Z side stays cut away towards the camera
-  const T = .12, hullTex = panelTexture('#d4d8de', '#a9afb8'); hullTex.wrapS = hullTex.wrapT = THREE.RepeatWrapping;
-  const hullMat = (rx, ry) => { const t = hullTex.clone(); t.repeat.set(rx, ry); t.needsUpdate = true; return new THREE.MeshStandardMaterial({ map: t, roughness: .6, metalness: .25 }); };
-  const skin = (geo, mat, x, y, z, rx, ry) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, 0); m.castShadow = m.receiveShadow = true; scene.add(m); return m; };
-  skin(new THREE.PlaneGeometry(W + 2 * T, D + T), hullMat(5, 4), 0, H + T, -T / 2, -Math.PI / 2, 0);      // roof
-  skin(new THREE.PlaneGeometry(W + 2 * T, D + T), hullMat(5, 4), 0, -T, -T / 2, Math.PI / 2, 0);          // belly
-  skin(new THREE.PlaneGeometry(D + T, H + 2 * T), hullMat(4, 3), -W / 2 - T, H / 2, -T / 2, 0, -Math.PI / 2);
-  skin(new THREE.PlaneGeometry(D + T, H + 2 * T), hullMat(4, 3), W / 2 + T, H / 2, -T / 2, 0, Math.PI / 2);
-  const outerBack = new THREE.Shape(); outerBack.moveTo(-W / 2 - T, -T); outerBack.lineTo(W / 2 + T, -T); outerBack.lineTo(W / 2 + T, H + T); outerBack.lineTo(-W / 2 - T, H + T); outerBack.lineTo(-W / 2 - T, -T);
-  const outerHole = new THREE.Path(); outerHole.absarc(-WIN.x, WIN.y, WIN.r, 0, Math.PI * 2, true); outerBack.holes.push(outerHole);   // mirrored: faces -Z
-  const backSkinTex = hullTex.clone(); backSkinTex.repeat.set(1 / .9, 1 / .9); backSkinTex.needsUpdate = true;
-  skin(new THREE.ShapeGeometry(outerBack, 48), new THREE.MeshStandardMaterial({ map: backSkinTex, roughness: .6, metalness: .25 }), 0, 0, -D / 2 - T, 0, Math.PI);
-  // section caps on the cut-away edge cover the wall thickness
-  const cap = new THREE.Shape(); cap.moveTo(-W / 2 - T, -T); cap.lineTo(W / 2 + T, -T); cap.lineTo(W / 2 + T, H + T); cap.lineTo(-W / 2 - T, H + T); cap.lineTo(-W / 2 - T, -T);
-  const capHole = new THREE.Path(); capHole.moveTo(-W / 2, 0); capHole.lineTo(-W / 2, H); capHole.lineTo(W / 2, H); capHole.lineTo(W / 2, 0); capHole.lineTo(-W / 2, 0); cap.holes.push(capHole);
-  skin(new THREE.ShapeGeometry(cap), std('#3a3f48', { r: .6, m: .3 }), 0, 0, D / 2 + .002, 0, 0);
-  const outerRing = new THREE.Mesh(new THREE.TorusGeometry(WIN.r + .03, .04, 16, 64), frameMat); outerRing.position.set(WIN.x, WIN.y, -D / 2 - T - .01); outerRing.castShadow = true; scene.add(outerRing);
   const glass = new THREE.Mesh(new THREE.CircleGeometry(WIN.r, 48), new THREE.MeshPhysicalMaterial({ color: '#cfe3ff', transparent: true, opacity: .1, roughness: .05, metalness: 0, clearcoat: 1, depthWrite: false }));
   glass.position.set(WIN.x, WIN.y, -D / 2 - .03); scene.add(glass);
   const glint = new THREE.Mesh(new THREE.CircleGeometry(WIN.r, 48), new THREE.MeshBasicMaterial({ map: canvasTex(256, 256, (g) => { const gr = g.createLinearGradient(40, 0, 220, 256); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(.42, 'rgba(255,255,255,.0)'); gr.addColorStop(.5, 'rgba(255,255,255,.22)'); gr.addColorStop(.56, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); }), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   glint.position.set(WIN.x, WIN.y, -D / 2 - .028); scene.add(glint);
-  // caption under the porthole (the view itself is the real 3D world outside)
+  // the view through the porthole: a dome (half sphere, r = 2.5 m) whose rim sits on the outer end
+  // of the wall tunnel. Every ray that passes the porthole hits its inner side, so from any camera
+  // position inside the room only the picture is visible, never its edge or empty space.
+  const stubMat = viewMaterial();
+  const stub = new THREE.Mesh(new THREE.SphereGeometry(2.5, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), stubMat);
+  stub.name = 'windowView'; stub.rotation.x = -Math.PI / 2; stub.position.set(WIN.x, WIN.y, -D / 2 - .135); scene.add(stub);
+  // caption under the porthole
   const capTex = {}; for (const [k, [label]] of Object.entries(VIEWS)) capTex[k] = textTex([label], 'rgba(10,12,16,.82)', '#e9edf5', 512, 72, '600 30px system-ui');
   const caption = new THREE.Mesh(new THREE.PlaneGeometry(.62, .087), new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false }));
   caption.position.set(WIN.x, WIN.y - WIN.r - .11, -D / 2 + .006); scene.add(caption);
 
-  // invisible colliders for the shell (front plane keeps floating items inside the cut-away)
+  // invisible colliders for the shell (six planes: floating items stay inside)
   addStatic(new CANNON.Plane(), V(0, 0, 0), Q(-Math.PI / 2, 0, 0));
   addStatic(new CANNON.Plane(), V(0, H, 0), Q(Math.PI / 2, 0, 0));
   addStatic(new CANNON.Plane(), V(-W / 2, 0, 0), Q(0, Math.PI / 2, 0));
@@ -400,6 +447,7 @@ export async function initCabin(host, getState) {
   add('toolbox', toolbox(), [1.55, 0, .55], -.4);
   add('chair', chair(), [-1.1, 0, .2], -Math.PI / 2);
   const dropBook = add('drop-test book', book(.22, .03, .16, '#e2672a', 'DROP TEST'), [DROP.x, -10, DROP.z]);
+  const bigItems = items.filter(it => ['chair', 'document box', 'toolbox'].includes(it.name));
   dropBook.excluded = true; dropBook.group.visible = false; world.removeBody(dropBook.body);
 
   // ---------- flame, lights, arrows, particles ----------
@@ -425,48 +473,70 @@ export async function initCabin(host, getState) {
 
   // ---------- camera ----------
   const controls = new OrbitControls(camera, renderer.domElement);
+  // Camera only inside the room: orbit around the room centre with OrbitControls limits, plus a
+  // per-frame clamp: inside the room box shrunk by 0.3 m and out of large objects.
+  controls.target.copy(CENTER);
   const VIEWPOINTS = {
-    overview: { pos: [1.15, 1.6, 2.7], target: [-.15, TOP + .1, -.2] },
-    window: { pos: [-.55, 1.35, .45], target: [WIN.x, WIN.y, WIN.z] },
-    drop: { pos: [.2, .62, 2.95], target: [DROP.x, .52, DROP.z] },
+    overview: { pos: [1.3, 1.65, 1.25], target: [0, 1.2, 0] },
+    window: { pos: [.55, 1.45, .85], target: [WIN.x, WIN.y, WIN.z] },
+    drop: { pos: [-.4, .75, 1.25], target: [DROP.x, .52, DROP.z] },
   };
-  const setView = (k) => { const v = VIEWPOINTS[k] || VIEWPOINTS.overview; camera.position.set(...v.pos); controls.target.set(...v.target); controls.update(); dirty = true; };
-  controls.enableDamping = true; controls.enablePan = false; controls.zoomSpeed = .9;
-  // Two camera modes. Inside: in the cabin, facing the porthole. Outside: the module in its world.
-  // Outside the max distance shows the whole module and its surroundings (far less than the 6 km world);
-  // the polar limit keeps the camera above the ground (in orbit, with no ground, it is free).
-  const MODES = {
-    inside: { pos: [.75, 1.45, 1.25], target: [WIN.x, WIN.y, WIN.z], min: .3, max: 5.5, az: 1.2, polar: Math.PI * .5 },
-    outside: { pos: [6.8, 3.4, 9.6], target: [0, 1.1, -.2], min: 4.5, max: 60, az: Infinity, polar: Math.PI * .47 },
-  };
-  let mode = 'inside', camAnim = null;
-  function applyLimits() {
-    const m = MODES[mode], orbit = outside.env === 'space';
-    controls.minDistance = m.min; controls.maxDistance = m.max;
-    controls.minAzimuthAngle = -m.az; controls.maxAzimuthAngle = m.az;
-    controls.minPolarAngle = 0; controls.maxPolarAngle = mode === 'outside' && orbit ? Math.PI : m.polar;
+  const setView = (k) => { const v = VIEWPOINTS[k] || VIEWPOINTS.overview; camera.position.set(...v.pos); controls.target.set(...v.target); controls.update(); constrain(); dirty = true; };
+  controls.enableDamping = true; controls.dampingFactor = .08; controls.enablePan = false; controls.zoomSpeed = .7;
+  controls.minDistance = LIMITS.minDistance; controls.maxDistance = LIMITS.maxDistance;
+  controls.minPolarAngle = LIMITS.minPolar; controls.maxPolarAngle = LIMITS.maxPolar;
+  // static obstacles (workbench with legs, shelves); large movable items are checked every frame
+  const OBSTACLES = [new THREE.Box3(new THREE.Vector3(-.72, 0, -.32), new THREE.Vector3(.72, TOP, .52)),
+    new THREE.Box3(new THREE.Vector3(SHELF_X - .82, SHELF_Y[0] - .14, SHELF_Z - .2), new THREE.Vector3(SHELF_X + .82, SHELF_Y[2] + .06, SHELF_Z + .2))];
+  const _box = new THREE.Box3(), _room = new THREE.Box3(ROOM.min, ROOM.max);
+  function pushOut(b) {   // move the camera out of box b (+ margin) through the nearest face
+    _box.copy(b).expandByScalar(LIMITS.objectMargin); const p = camera.position;
+    if (!_box.containsPoint(p)) return;
+    const pen = [p.x - _box.min.x, _box.max.x - p.x, p.y - _box.min.y, _box.max.y - p.y, p.z - _box.min.z, _box.max.z - p.z];
+    let k = 0; for (let i = 1; i < 6; i++) if (pen[i] < pen[k]) k = i;
+    if (k === 0) p.x = _box.min.x; else if (k === 1) p.x = _box.max.x; else if (k === 2) p.y = _box.min.y;
+    else if (k === 3) p.y = _box.max.y; else if (k === 4) p.z = _box.min.z; else p.z = _box.max.z;
   }
-  function loosen() { controls.minDistance = 0; controls.maxDistance = Infinity; controls.minAzimuthAngle = -Infinity; controls.maxAzimuthAngle = Infinity; controls.minPolarAngle = 0; controls.maxPolarAngle = Math.PI; }
-  function setMode(next, instant = false) {
-    mode = next in MODES ? next : 'inside'; const m = MODES[mode];
-    camAnim = { t: 0, dur: instant || reduce ? 0 : 1.3, p0: camera.position.clone(), t0: controls.target.clone(), p1: new THREE.Vector3(...m.pos), t1: new THREE.Vector3(...m.target) };
-    loosen(); dirty = true;
+  const _ib = new THREE.Box3();
+  function constrain() {
+    for (const o of OBSTACLES) pushOut(o);
+    for (const it of bigItems) if (it.group.visible) pushOut(_ib.setFromObject(it.group));
+    _room.clampPoint(camera.position, camera.position);         // last: never closer than 0.3 m to a wall, floor or ceiling
+    controls.target.clamp(ROOM.min, ROOM.max);
   }
-  // raw placement for tests and screenshots: no clamping until the next setMode()
-  function setCamera(pos, target) { camAnim = null; loosen(); camera.position.set(...pos); controls.target.set(...target); controls.update(); dirty = true; }
+  // Test helper: rays from the camera through points spread over the porthole. Each ray that gets
+  // past the wall must end on the window view (never in empty space). ok: no such ray escapes and
+  // at least one ray sees the view.
+  const _rc = new THREE.Raycaster(), _pt = new THREE.Vector3(), _dir = new THREE.Vector3();
+  function windowCheck() {
+    scene.updateMatrixWorld(true);
+    const solid = []; scene.traverse(o => { if (o.isMesh && o.visible && !(o.material.transparent)) solid.push(o); });
+    let rays = 0, view = 0, escaped = 0;
+    for (let k = 0; k < 25; k++) {
+      const a = k * 2.399963, rr = WIN.r * .95 * Math.sqrt((k + .5) / 25);       // sunflower spread over the glass
+      _pt.set(WIN.x + Math.cos(a) * rr, WIN.y + Math.sin(a) * rr, -D / 2 - .03);
+      _rc.set(camera.position, _dir.copy(_pt).sub(camera.position).normalize()); _rc.near = 0; _rc.far = 100;
+      const hit = _rc.intersectObjects(solid, false)[0]; rays++;
+      if (!hit) { escaped++; continue; }
+      if (hit.object === stub) view++;
+    }
+    return { ok: escaped === 0 && view > 0, rays, view, escaped };
+  }
+  // raw placement for tests: the limits apply on the next frame, exactly as for user input
+  function setCamera(pos, target) { camera.position.set(...pos); if (target) controls.target.set(...target); dirty = true; }
   function resize() { const w = host.clientWidth, h = host.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
     smoke.points.material.uniforms.uScale.value = dust.points.material.uniforms.uScale.value = h * .9; dirty = true; }
-  let dirty = true; setMode('inside', true);
+  let dirty = true; setView('overview');
   new ResizeObserver(resize).observe(host); resize();
   let visible = true; new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(host);
   controls.addEventListener('change', () => { dirty = true; });
 
   // ---------- environment changes: re-apply g, wake every body, re-place items ----------
   let g = 0, gEarth = 9.80665, env = null, drop = null, envFade = null, pendingEnv = null;
+  let viewEnv = null;
   function applyWorld(id) {
-    outside.setEnv(id);
-    if (TEST_BG) { scene.background = null; scene.fog = null; renderer.setClearColor(0xff00ff, 1); }
-    applyLimits();
+    viewEnv = id; stubMat.uniforms.uView.value = VIEW_ID[id] ?? 0;
+    if (TEST_BG) { scene.background = null; renderer.setClearColor(0xff00ff, 1); } else scene.background = new THREE.Color('#0b0d12');
   }
   const rand = rng(42);
   function placeItems(zeroG) {
@@ -494,7 +564,7 @@ export async function initCabin(host, getState) {
     cancelDrop();
     smoke.list.length = 0; dust.list.length = 0;
     const L = LIGHT[env] || LIGHT.earth; Object.assign(lightNow, { target: L });
-    // the world outside: fade the exposure down, swap, fade back up (smooth change of view)
+    // the view through the porthole: fade the exposure down, swap, fade back up
     envFade = envFade === null ? 1 : 0; pendingEnv = env;
     if (envFade === 1) applyWorld(env);
     caption.material.map = capTex[env]; caption.material.needsUpdate = true;
@@ -573,6 +643,7 @@ export async function initCabin(host, getState) {
       if (before < .5 && envFade >= .5) applyWorld(pendingEnv);
       renderer.toneMappingExposure = .2 + .8 * Math.abs(envFade - .5) * 2;
     } else renderer.toneMappingExposure = 1;
+    stubMat.uniforms.uFade.value = renderer.toneMappingExposure; stubMat.uniforms.uTime.value = t;
 
     // flame (decor items never burn): shape from g/g_Earth and the airflow only
     alive += ((s.out ? 0 : 1) - alive) * (reduce ? 1 : Math.min(1, dtReal * 2.5));
@@ -612,12 +683,7 @@ export async function initCabin(host, getState) {
     smoke.flush(p => { const q = p.life / p.max; return (p.kind === 'vapor' ? .3 : .2) * Math.sin(Math.PI * Math.min(1, q * 1.5)) * (1 - q); });
     dust.flush(p => .6 * (1 - p.life / p.max));
 
-    if (camAnim) {   // smooth transition between camera modes (ease in-out)
-      camAnim.t += dtReal; const k = camAnim.dur ? Math.min(1, camAnim.t / camAnim.dur) : 1, e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-      camera.position.lerpVectors(camAnim.p0, camAnim.p1, e); controls.target.lerpVectors(camAnim.t0, camAnim.t1, e);
-      if (k >= 1) { camAnim = null; applyLimits(); } dirty = true;
-    }
-    controls.update(); outside.update(camera, t); renderer.render(scene, camera); dirty = false;
+    controls.update(); constrain(); renderer.render(scene, camera); dirty = false;
     perf.end();
     if (!frame.first) { frame.first = true; performance.mark('mf-3d-first-frame'); }
   }
@@ -625,8 +691,8 @@ export async function initCabin(host, getState) {
     bodiesAwake: world.bodies.filter(b => b.mass > 0 && b.sleepState !== CANNON.Body.SLEEPING).length, quality: 'n/a', scale: 1, dpr: renderer.getPixelRatio() }));
   frame();
   return {
-    scene, camera, controls, renderer, world, items, setView, STEP, setMode, setCamera, MODES,
-    get mode() { return mode; }, get worldEnv() { return outside.env; },
+    scene, camera, controls, renderer, world, items, setView, STEP, setCamera, ROOM, LIMITS, CENTER,
+    get viewEnv() { return viewEnv; }, windowCheck,
     dropTest: (onTick) => dropTest(onTick),   // no UI: used by the automated gravity test
     get g() { return g; }, get fps() { return fps; }, get simTime() { return simTime; }, perf: () => perf.snapshot(),
   };

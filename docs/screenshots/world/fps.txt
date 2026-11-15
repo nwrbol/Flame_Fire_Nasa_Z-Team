@@ -1,1 +1,0 @@
-GPU {'earth-inside': 28.4, 'earth-outside': 43.9, 'moon-inside': 46.6, 'moon-outside': 53.2, 'mars-inside': 40.8, 'mars-outside': 41.1, 'space-inside': 40.8, 'space-outside': 48.0}

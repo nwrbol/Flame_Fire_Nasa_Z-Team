@@ -1,1 +1,1 @@
-GPU {'earth': 46.8, 'moon': 50.3, 'mars': 48.0, 'space': 53.3}
+GPU {'earth': 49.6, 'moon': 36.4, 'mars': 53.4, 'space': 46.5}

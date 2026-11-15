@@ -141,9 +141,6 @@ input[type=range]:disabled{opacity:.35}
 .viz .canvas{min-height:380px}
 .viz .canvas canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 .illus{position:absolute;left:14px;top:12px;z-index:2;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.1);color:#d9d9d4;pointer-events:none}
-.cam-seg{position:absolute;right:12px;top:10px;z-index:2;display:flex;gap:4px;padding:4px;border-radius:99px}
-.cam-seg button{padding:6px 14px;border-radius:99px;font-size:12.5px;font-weight:600;color:#e9ecf2}
-@media (max-width:480px){.cam-seg{top:auto;bottom:10px;right:10px}}
 .no3d{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#a5a59e;font-size:14px}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--card);border:2px solid var(--fg);cursor:grab;transition:transform .15s}
 input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2);border-color:var(--accent)}
@@ -360,7 +357,6 @@ footer a{text-decoration:none}footer a:hover{color:var(--fg)}
       </div>
       <div class="viz">
         <div class="canvas" id="scene3d"><span class="illus">Illustration</span>
-          <div class="cam-seg" role="group" aria-label="Camera" hidden><button type="button" data-cam="inside" aria-pressed="true">Inside</button><button type="button" data-cam="outside" aria-pressed="false">Outside</button></div>
           <p class="no3d" id="no3d" hidden>3D view needs WebGL, which this browser does not provide. The NASA test data around it still works.</p></div>
         <div class="nearest" id="nearest" aria-live="polite"><small>Closest real test</small><p class="nt">Loading…</p></div>
       </div>
@@ -873,12 +869,6 @@ if (!gl) {
   try {
     const { initCabin } = await import('/js/cabin3d.js');
     window.cabin3d = await initCabin(host, window.flameState);
-    // camera modes: inside the cabin (facing the porthole) / outside (the module in its world)
-    const camSeg = host.querySelector('.cam-seg'); camSeg.hidden = false;
-    camSeg.querySelectorAll('[data-cam]').forEach(b => b.onclick = () => {
-      window.cabin3d.setMode(b.dataset.cam);
-      camSeg.querySelectorAll('[data-cam]').forEach(x => x.setAttribute('aria-pressed', x === b));
-    });
   } catch (err) {
     console.error('3D scene failed', err);
     document.getElementById('no3d').hidden = false;

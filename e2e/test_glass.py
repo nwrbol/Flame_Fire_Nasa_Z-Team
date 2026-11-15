@@ -25,7 +25,7 @@ try:
 except ImportError:  # pragma: no cover
     sync_playwright = None
 
-BUTTONS = '.btn, .chip, .theme-btn, .seg button, .cam-seg button, .pager button, .fab'
+BUTTONS = '.btn, .chip, .theme-btn, .seg button, .pager button, .fab'
 
 
 def lum(rgb):

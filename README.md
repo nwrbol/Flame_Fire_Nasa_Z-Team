@@ -41,7 +41,7 @@ Open http://127.0.0.1:8001/. Without a Groq key the site still works; the chat r
 .\.venv\Scripts\python.exe -m unittest backend.tests.test_security backend.tests.test_offline backend.tests.test_csv_data backend.tests.test_simulator backend.tests.test_knowledge
 .\.venv\Scripts\python.exe -m pip install playwright      # once; uses the installed Microsoft Edge
 .\.venv\Scripts\python.exe -m unittest e2e.test_site       # browser checks + docs/screenshots/*.png
-.\.venv\Scripts\python.exe -m unittest e2e.test_world      # 3D world: magenta clear colour must never show (docs/screenshots/world/)
+.\.venv\Scripts\python.exe -m unittest e2e.test_room       # camera stays in the room: magenta must never show (docs/screenshots/room/)
 .\.venv\Scripts\python.exe -m unittest e2e.test_glass      # Liquid Glass buttons: contrast >= 4.5:1, focus ring, reduced motion
 ```
 
