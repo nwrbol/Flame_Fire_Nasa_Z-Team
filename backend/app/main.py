@@ -136,6 +136,11 @@ def chat(request: ChatRequest):
         raise HTTPException(503, 'AI assistant is not configured') from error
     try:
         return assistant.answer(question, [turn.model_dump() for turn in request.history])
+    except RuntimeError as error:
+        if 'GROQ_API_KEY' in str(error):       # no key: "not configured", not a failed upstream call
+            raise HTTPException(503, 'AI assistant is not configured') from error
+        logging.getLogger(__name__).exception('AI request failed')
+        raise HTTPException(502, 'AI service did not respond; try again later') from error
     except Exception as error:
         logging.getLogger(__name__).exception('AI request failed')
         raise HTTPException(502, 'AI service did not respond; try again later') from error
